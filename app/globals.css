@@ -1,0 +1,355 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@import "katex/dist/katex.min.css";
+
+/* 修复 KaTeX 双重显示问题 */
+.katex-mathml {
+  display: none;
+}
+
+/* 确保 prose 样式在 Tailwind v4 中生效并有基本的间距 */
+.prose {
+  max-width: none;
+}
+.prose pre { background-color: transparent !important; padding: 0 !important; margin: 0 !important; }
+.prose pre code { background-color: transparent !important; padding: 0 !important; }
+.prose h1 { font-size: 1rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 1rem; }
+.prose h2 { font-size: 0.9rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.75rem; }
+.prose h3 { font-size: 0.8rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; }
+.prose p { margin-top: 0.5rem; margin-bottom: 0.5rem; line-height: 1.625; }
+.prose *:first-child { margin-top: 0; }
+.prose *:last-child { margin-bottom: 0; }
+.prose ul { list-style-type: disc; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.prose li { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+.prose table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; margin-bottom: 1.5rem; border-radius: 0.5rem; overflow: hidden; border: 1px solid oklch(0.92 0.004 286.32); }
+.prose th, .prose td { border: 1px solid oklch(0.92 0.004 286.32); padding: 0.75rem; text-align: left; }
+.prose th { background-color: oklch(0.985 0 0); font-weight: 600; color: oklch(0.21 0.006 285.885); border-bottom-width: 2px; }
+.prose tr:nth-child(even) { background-color: oklch(0.985 0 0 / 50%); }
+.prose blockquote { border-left-width: 4px; border-left-color: oklch(0.92 0.004 286.32); padding-left: 1.25rem; font-style: italic; margin-top: 1.5rem; margin-bottom: 1.5rem; color: oklch(0.441 0.005 285.823); background-color: oklch(0.985 0 0 / 30%); padding-top: 0.5rem; padding-bottom: 0.5rem; border-radius: 0.25rem; }
+
+/* 确保长文本（如 URL）能够自动换行 */
+.prose p,
+.prose li,
+.prose td,
+.prose th,
+.prose blockquote,
+.prose div {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-all;
+}
+
+/* 术语与定义列表支持 */
+.prose dl { margin-top: 1rem; margin-bottom: 1rem; }
+.prose dt { font-weight: 700; margin-top: 1rem; color: oklch(0.21 0.006 285.885); }
+.prose dd { margin-left: 1.5rem; margin-top: 0.25rem; color: oklch(0.441 0.005 285.823); }
+
+/* Dark mode overrides for manual prose */
+.dark .prose { color: oklch(0.95 0.002 285.823); }
+.dark .prose th, .dark .prose td { border-color: oklch(0.95 0.002 285.823 / 0.15); }
+.dark .prose th { background-color: oklch(0.28 0.006 286.033); color: oklch(0.95 0.002 285.823); }
+.dark .prose tr:nth-child(even) { background-color: oklch(0.95 0.002 285.823 / 0.05); }
+.dark .prose dt { color: oklch(0.95 0.002 285.823); }
+.dark .prose dd { color: oklch(0.65 0.012 285.938); }
+.dark .prose blockquote { border-left-color: oklch(0.70 0.015 286.067); color: oklch(0.65 0.012 285.938); background-color: oklch(0.95 0.002 285.823 / 0.05); }
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-poppins), var(--font-inter), var(--font-noto-sans-sc), sans-serif;
+  --font-mono: var(--font-inter), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl); /* 保留兼容性，指向 xl */
+}
+
+:root {
+  /* Design Unification System: 1rem = 20px base */
+  --radius-sm: 0.4rem;   /* 8px - Small items */
+  --radius-md: 0.6rem;   /* 12px - Base items (buttons, inputs) */
+  --radius-lg: 1rem;     /* 20px - Large containers (dialogs, cards) */
+  --radius-xl: 1.3rem;   /* 26px - Extra large (chat bubbles, main input) */
+  --radius-2xl: 1.3rem;  /* 兼容旧定义，映射到 xl */
+  
+  --radius: 0.6rem;      /* Fallback for Shadcn components */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.141 0.005 285.823);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.141 0.005 285.823);
+  --primary: oklch(0.21 0.006 285.885);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.967 0.001 286.375);
+  --muted-foreground: oklch(0.552 0.016 285.938);
+  --accent: oklch(0.967 0.001 286.375);
+  --accent-foreground: oklch(0.21 0.006 285.885);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.92 0.004 286.32);
+  --input: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.705 0.015 286.067);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.141 0.005 285.823);
+  --sidebar-primary: oklch(0.21 0.006 285.885);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.967 0.001 286.375);
+  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-ring: oklch(0.705 0.015 286.067);
+}
+
+.dark {
+  /* Background - 使用更柔和的深色背景，避免过黑 */
+  --background: oklch(0.18 0.006 285.885);
+  --foreground: oklch(0.95 0.002 285.823);
+  
+  /* Card - 稍亮于背景，保持层次感 */
+  --card: oklch(0.22 0.006 285.885);
+  --card-foreground: oklch(0.95 0.002 285.823);
+  
+  /* Popover - 与 card 一致 */
+  --popover: oklch(0.22 0.006 285.885);
+  --popover-foreground: oklch(0.95 0.002 285.823);
+  
+  /* Primary - 使用更亮的蓝紫色，确保在深色背景下醒目 */
+  --primary: oklch(0.70 0.015 286.067);
+  --primary-foreground: oklch(0.18 0.006 285.885);
+  
+  /* Secondary - 中等亮度的蓝紫色，用于次要元素 */
+  --secondary: oklch(0.30 0.006 286.033);
+  --secondary-foreground: oklch(0.95 0.002 285.823);
+  
+  /* Muted - 用于禁用或弱化元素 */
+  --muted: oklch(0.28 0.005 286.033);
+  --muted-foreground: oklch(0.65 0.012 285.938);
+  
+  /* Accent - 与 secondary 略有不同，用于强调 */
+  --accent: oklch(0.32 0.006 286.033);
+  --accent-foreground: oklch(0.95 0.002 285.823);
+  
+  /* Destructive - 红色警告色，在深色背景下更醒目 */
+  --destructive: oklch(0.65 0.22 27.325);
+  
+  /* Border - 使用半透明白色，确保边界清晰 */
+  --border: oklch(0.95 0.002 285.823 / 0.2);
+  --input: oklch(0.95 0.002 285.823 / 0.15);
+  
+  /* Ring - 焦点环颜色，使用更亮的蓝紫色 */
+  --ring: oklch(0.70 0.015 286.067);
+  
+  /* Chart colors - 调整为更适合深色背景的配色 */
+  --chart-1: oklch(0.65 0.18 264.376);
+  --chart-2: oklch(0.72 0.14 162.48);
+  --chart-3: oklch(0.75 0.16 70.08);
+  --chart-4: oklch(0.68 0.20 303.9);
+  --chart-5: oklch(0.70 0.18 16.439);
+  
+  /* Sidebar - 与背景一致，保持整体统一 */
+  --sidebar: oklch(0.18 0.006 285.885);
+  --sidebar-foreground: oklch(0.95 0.002 285.823);
+  --sidebar-primary: oklch(0.70 0.015 286.067);
+  --sidebar-primary-foreground: oklch(0.18 0.006 285.885);
+  --sidebar-accent: oklch(0.30 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.95 0.002 285.823);
+  --sidebar-border: oklch(0.95 0.002 285.823 / 0.2);
+  --sidebar-ring: oklch(0.70 0.015 286.067);
+}
+
+@layer base {
+  html {
+    font-size: 16px; /* 移动端友好的基础字体 */
+    scroll-behavior: smooth;
+  }
+
+  @media (min-width: 768px) {
+    html {
+      font-size: 20px; /* 桌面端使用更大的字体 */
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+    :root {
+      /* 定义一个更长的滚动动画时间变量 */
+      --scroll-behavior-duration: 1s;
+    }
+    * {
+      /* Firefox */
+      scrollbar-width: thin;
+      /*
+        Unfortunately, there's no standard way to control scroll animation duration
+        for `scroll-behavior: smooth`. The following is a conceptual example
+        and might not work across all browsers. We're relying on browser implementation.
+      */
+    }
+  }
+
+  * {
+    @apply border-border;
+    /* 防止移动端双击缩放 */
+    touch-action: manipulation;
+  }
+  
+  /* 但允许滚动容器正常滚动 */
+  [data-scroll-container],
+  .overflow-auto,
+  .overflow-x-auto,
+  .overflow-y-auto {
+    touch-action: pan-x pan-y;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  /* 平滑滚动容器 - 用于流式输出 */
+  .smooth-scroll-container {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* 当用户主动滚动时，禁用平滑滚动以获得即时响应 */
+  .smooth-scroll-container.user-scrolling {
+    scroll-behavior: auto;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #374151;
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+  }
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #e5e7eb transparent;
+  }
+  .dark .custom-scrollbar {
+    scrollbar-color: #374151 transparent;
+  }
+
+  /* 代码块容器样式 */
+  .code-block-container {
+    /* 确保 sticky 在正确的上下文中工作 */
+    contain: layout;
+  }
+
+  /* 代码块标题栏 sticky 效果 */
+  .code-block-header.sticky {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    /* 添加底部阴影以区分固定状态 */
+    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  /* 文本右侧渐变隐藏效果 */
+  .text-fade-out {
+    mask-image: linear-gradient(to right, black 70%, transparent 95%);
+    -webkit-mask-image: linear-gradient(to right, black 70%, transparent 95%);
+  }
+  .dark .text-fade-out {
+    mask-image: linear-gradient(to right, black 70%, transparent 95%);
+    -webkit-mask-image: linear-gradient(to right, black 70%, transparent 95%);
+  }
+
+  /* 移动端安全区域支持 */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* 确保触摸目标足够大（iOS 推荐 44x44px） */
+  @media (hover: none) and (pointer: coarse) {
+    button:not([disabled]),
+    a:not([disabled]),
+    [role="button"]:not([disabled]) {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* 小图标按钮例外，但需要更大的点击区域 */
+    button.size-icon,
+    [role="button"].size-icon {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+}

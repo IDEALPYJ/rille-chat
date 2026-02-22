@@ -1,0 +1,427 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------
+// 1. 用户系统
+// --------------------------------------
+
+model User {
+  id       String  @id @default(cuid())
+  username String  @unique
+  password String
+  image    String?
+  role     String  @default("user")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+  files    File[]
+  projects Project[]
+  prompts  Prompt[]
+  memories Memory[]
+  settings UserSetting?
+  mcpPlugins McpPlugin[]
+  skills     Skill[]
+}
+
+model Memory {
+  id      String @id @default(cuid())
+  content String // 记忆内容
+
+  // 向量数据（可选，关键词模式时为 null）
+  // 实际向量存储在 migration 中创建的 embedding_vector 列
+  embedding Bytes?
+
+  // 记忆分类
+  root String? // Profile | Preference | Ability | Goal | Context
+
+  // 状态机
+  status String @default("candidate") // candidate | active | archived
+
+  // 权重与验证
+  frequency  Int @default(1) // 验证计数器
+  importance Int @default(3) // 1-5 重要性评分
+
+  // 时间戳（用于生命周期管理）
+  lastAccessed DateTime @default(now()) @map("last_accessed")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // 关联
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String? // 可选的项目ID，用于项目级记忆隔离
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 向后兼容：保留旧字段
+  category String? // @deprecated 迁移后删除
+  tokens   Int?    @default(0) // @deprecated 迁移后删除
+  lastUsed DateTime? @map("last_used") // @deprecated 迁移后删除
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([status])
+  @@index([root])
+}
+
+model Prompt {
+  id      String  @id @default(cuid())
+  title   String
+  content String
+  icon    String? // 提示词图标（Lucide图标名称或emoji）
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Project {
+  id             String  @id @default(cuid())
+  name           String
+  icon           String?
+  description    String?
+  memoryIsolated Boolean @default(false)
+  embeddingEnabled Boolean @default(false)
+  embeddingModelId String? // 格式: "provider:model"
+  embeddingDimensions Int? // 向量维度
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sessions Session[]
+  files    File[]
+  memories Memory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model UserSetting {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  config    Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --------------------------------------
+// 2. 会话管理 (Tree-Aware)
+// --------------------------------------
+
+model Session {
+  id    String @id @default(cuid())
+  title String @default("New Chat")
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  messages Message[]
+  sessionMcpPlugins SessionMcpPlugin[]
+  sessionSkills SessionSkill[]
+
+  // [关键新增] 树状对话的"书签"，指向当前显示的最后一条消息
+  currentLeafId String?
+
+  messageCount Int @default(0)
+
+  // 图像生成会话标识
+  isImageGeneration Boolean @default(false)
+
+  // 冗余字段：最后一条消息的预览信息（用于优化查询性能）
+  lastMessagePreview String?
+  lastMessageAt      DateTime?
+  lastMessageRole    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([updatedAt])
+  @@index([isImageGeneration])
+}
+
+// --------------------------------------
+// 3. 核心消息表 (Tree Nodes)
+// --------------------------------------
+
+model Message {
+  id String @id @default(cuid())
+
+  role             String
+  content          String
+  contentParts     Json?     // [新增] 结构化消息内容：[{type: 'text', content: '...'}, {type: 'tool_call', ...}]
+  reasoningContent String?
+  searchResults    Json?
+  retrievalChunks  Json?     // [新增] 文档检索结果
+
+  // --- 语音消息 ---
+  isVoiceInput Boolean @default(false) // 是否为语音输入
+  audioUrl     String? // 原始语音文件 URL
+  audioDuration Float? // 语音时长（秒）
+
+  // --- 树状结构 ---
+  parentId String?
+  parent   Message?  @relation("Tree", fields: [parentId], references: [id])
+  children Message[] @relation("Tree")
+
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // --- 元数据 ---
+  provider String?
+  model    String?
+  modelAvatar String? // 模型头像，从模型配置读取
+
+  // --- 统计 ---
+  inputTokens       Int   @default(0)
+  outputTokens      Int   @default(0)
+  inputCacheTokens  Int   @default(0)
+  outputCacheTokens Int   @default(0)
+  totalTokens       Int   @default(0)
+  cost              Float @default(0.0)
+
+  // --- 性能 ---
+  status       String    @default("pending")
+  error        String?
+  duration     Int?
+  firstTokenAt DateTime?
+  finishReason String?
+
+  // --- 追踪 ---
+  traceId String?
+
+  requestParams Json?
+
+  feedback String?
+
+  // [修正 2] 补全"握手"：添加附件的反向关联
+  attachments Attachment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId])
+  @@index([sessionId, traceId])
+  @@index([parentId])
+  @@index([createdAt])
+}
+
+// --------------------------------------
+// 4. 知识库 (RAG Ready)
+// --------------------------------------
+
+model File {
+  id     String @id @default(cuid())
+  name   String
+  url    String
+  type   String
+  size   Int
+  status String @default("processing")
+  tokens Int    @default(0)
+  md5    String? // MD5 hash for duplicate detection
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  chunks DocumentChunk[] // [新增] 关联切片
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([md5])
+}
+
+model DocumentChunk {
+  id         String @id @default(cuid())
+  content    String
+  tokenCount Int
+  // ⚠️ 重要：embedding 字段是占位符，用于向后兼容
+  // 实际的向量数据存储在 embedding_vector 列中（pgvector 类型）
+  // 该列在迁移文件中手动创建，因为 Prisma 不支持 pgvector 类型
+  embedding  Bytes? // 保留用于兼容性（旧数据）
+
+  // 元数据字段
+  chunkIndex Int?        // 在文件中的块索引（第几块）
+  pageNumber Int?        // 页码（如果是 PDF）
+  sectionTitle String?  // 章节标题
+
+  fileId String
+  file   File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+  
+  // ============================================================
+  // ⚠️ pgvector 列定义说明
+  // ============================================================
+  // 
+  // 由于 Prisma 原生不支持 PostgreSQL 的 pgvector 扩展类型，
+  // embedding_vector 列和相关的 HNSW 索引在迁移文件中手动创建。
+  // 
+  // 相关迁移文件：
+  //   - prisma/migrations/20260109215040_add_pgvector_support/migration.sql
+  // 
+  // 维护注意事项：
+  // 1. 如果修改 DocumentChunk 模型，必须同时检查迁移文件
+  // 2. 如果添加新的向量相关列，需要在迁移文件中手动创建
+  // 3. 运行 `pnpm tsx scripts/verify-schema-consistency.ts` 验证一致性
+  // 
+  // 当前定义的列（在迁移文件中）：
+  //   - embedding_vector vector(1536) - 向量数据（默认 1536 维）
+  //   - embedding_hnsw_idx - HNSW 索引用于快速相似度搜索
+  // 
+  // 如果使用不同维度的模型，需要：
+  //   1. 创建新的迁移文件
+  //   2. 添加对应维度的 vector 列或索引
+  //   3. 更新此注释说明
+  // ============================================================
+}
+
+model Attachment {
+  id String @id @default(cuid())
+
+  name String
+  url  String
+  type String
+  size Int
+
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
+  @@index([url])
+}
+
+// --------------------------------------
+// 5. MCP 插件管理
+// --------------------------------------
+
+model McpPlugin {
+  id          String  @id @default(cuid())
+  name        String  // 插件名称
+  icon        String? // 插件图标（URL或emoji）
+  serverUrl   String  // 服务器地址
+  authType    String  @default("none") // 认证类型: "none" | "apiKey"
+  apiKey      String? // API Key（加密存储）
+  advancedConfig Json @default("{}") // 高级配置：{ keyValuePairs: {}, ignoreSSL: boolean }
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sessionMcpPlugins SessionMcpPlugin[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// 会话与MCP插件的关联表（多对多关系，用于用户在聊天中决定开启哪些MCP）
+model SessionMcpPlugin {
+  id        String   @id @default(cuid())
+  sessionId String
+  pluginId  String
+  enabled   Boolean  @default(true) // 是否在该会话中启用
+
+  session Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  plugin  McpPlugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sessionId, pluginId])
+  @@index([sessionId])
+  @@index([pluginId])
+}
+
+// --------------------------------------
+// 6. Skills 技能管理
+// --------------------------------------
+
+model Skill {
+  id          String   @id @default(cuid())
+  name        String   // 技能唯一标识（小写字母、数字、连字符）
+  displayName String   // 显示名称
+  description String   // 技能描述（用于触发判断）
+  icon        String?  // 图标（emoji 或 URL）
+  
+  // SKILL.md 内容存储
+  instructions String @db.Text // 主要指令内容
+  
+  // 额外资源文件（JSON 格式存储文件列表）
+  resources Json? // [{name: "FORMS.md", content: "..."}, ...]
+  
+  // 脚本文件（JSON 格式存储）
+  scripts Json? // [{name: "validate.py", content: "..."}, ...]
+  
+  // 元数据
+  version     String   @default("1.0.0")
+  author      String?
+  tags        String[] // 标签数组
+  
+  // 触发配置
+  triggerKeywords String[] // 触发关键词
+  
+  // 用户关联
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 会话关联（多对多）
+  sessionSkills SessionSkill[]
+  
+  // 系统预设标记
+  isSystem    Boolean @default(false)
+  isEnabled   Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([name])
+  @@unique([name, userId])
+}
+
+// 会话与 Skill 的关联表（多对多关系）
+model SessionSkill {
+  id        String   @id @default(cuid())
+  sessionId String
+  skillId   String
+  enabled   Boolean  @default(true) // 是否在该会话中启用
+  
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  skill   Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sessionId, skillId])
+  @@index([sessionId])
+  @@index([skillId])
+}

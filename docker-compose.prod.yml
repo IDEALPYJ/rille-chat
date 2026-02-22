@@ -1,0 +1,62 @@
+# Rille Chat 生产环境 Docker Compose 配置
+# 简化版：使用 db push 替代 migrate，避免迁移文件管理复杂性
+#
+# 使用方法：
+#   1. 复制 .env.example 为 .env 并填写配置
+#   2. 运行: docker-compose -f docker-compose.prod.yml up -d
+#   3. 配置 Nginx/Caddy 反向代理
+
+services:
+  app:
+    image: idealpyj/rille-chat:latest
+    container_name: rille-chat
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - AUTH_SECRET=${AUTH_SECRET}
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-rille_chat_password}@db:5432/rille_chat
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - NODE_ENV=production
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      # 跳过容器内的迁移，使用外部管理
+      - SKIP_MIGRATIONS=true
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      - db
+    networks:
+      - rille-chat-network
+
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: rille-chat-db
+    restart: unless-stopped
+    expose:
+      - "5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rille_chat_password}
+      - POSTGRES_DB=rille_chat
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - rille-chat-network
+
+volumes:
+  postgres_data:
+    name: rille-chat-postgres
+  uploads_data:
+    name: rille-chat-uploads
+
+networks:
+  rille-chat-network:
+    name: rille-chat-network
+    driver: bridge

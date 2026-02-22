@@ -1,0 +1,62 @@
+# Rille Chat Docker Compose 配置
+# 使用方法：
+#   1. 复制 .env.example 为 .env 并填写配置
+#   2. 运行: docker-compose up -d
+#   3. 访问: http://localhost:3000
+
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: rille-chat
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - AUTH_SECRET=${AUTH_SECRET}
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-rille_chat_password}@db:5432/rille_chat
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - NODE_ENV=production
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    # 使用包含 pgvector 的 PostgreSQL 镜像以支持向量搜索
+    # 如果需要标准 PostgreSQL，可以改为: postgres:16-alpine
+    image: pgvector/pgvector:pg16
+    container_name: rille-chat-db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rille_chat_password}
+      - POSTGRES_DB=rille_chat
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    name: rille-chat-postgres
+  uploads_data:
+    name: rille-chat-uploads
+
+
+
