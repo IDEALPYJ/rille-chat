@@ -5,10 +5,50 @@
 
 import { logger } from "@/lib/logger";
 import { EmbeddingProvider, EmbeddingConfig } from "../types";
+import { sanitizeBaseURL } from "@/lib/utils/url-validator";
+
+// 允许的ZAI域名列表
+const ALLOWED_ZAI_HOSTS = [
+  'open.bigmodel.cn',
+  '*.bigmodel.cn',
+];
+
+// 默认ZAI API地址
+const DEFAULT_ZAI_BASE_URL = "https://open.bigmodel.cn/api/paas/v4";
+
+/**
+ * 安全地清理baseURL
+ * 修复ReDoS：使用简单的字符串操作代替复杂的正则
+ */
+function safeCleanBaseURL(url: string): string {
+  // 限制输入长度以防止ReDoS
+  if (url.length > 500) {
+    logger.warn('BaseURL too long, truncating', { length: url.length });
+    url = url.slice(0, 500);
+  }
+
+  let cleaned = url.trim();
+
+  // 移除 /embeddings 后缀（简单字符串操作）
+  if (cleaned.endsWith('/embeddings')) {
+    cleaned = cleaned.slice(0, -11);
+  } else if (cleaned.endsWith('/embeddings/')) {
+    cleaned = cleaned.slice(0, -12);
+  }
+
+  // 移除尾部斜杠（简单循环）
+  while (cleaned.endsWith('/')) {
+    cleaned = cleaned.slice(0, -1);
+  }
+
+  return cleaned;
+}
 
 export class ZAIEmbeddingProvider implements EmbeddingProvider {
   async getEmbedding(text: string, config: EmbeddingConfig): Promise<number[]> {
-    const baseURL = config.baseURL?.replace(/\/embeddings\/?$/, "").replace(/\/+$/, "") || "https://open.bigmodel.cn/api/paas/v4";
+    // 使用安全的URL清理和验证
+    const rawBaseURL = config.baseURL ? safeCleanBaseURL(config.baseURL) : undefined;
+    const baseURL = sanitizeBaseURL(rawBaseURL, DEFAULT_ZAI_BASE_URL, ALLOWED_ZAI_HOSTS);
     const url = `${baseURL}/embeddings`;
     
     try {
@@ -65,7 +105,9 @@ export class ZAIEmbeddingProvider implements EmbeddingProvider {
   }
 
   async getEmbeddingsBatch(texts: string[], config: EmbeddingConfig): Promise<number[][]> {
-    const baseURL = config.baseURL?.replace(/\/embeddings\/?$/, "").replace(/\/+$/, "") || "https://open.bigmodel.cn/api/paas/v4";
+    // 使用安全的URL清理和验证
+    const rawBaseURL = config.baseURL ? safeCleanBaseURL(config.baseURL) : undefined;
+    const baseURL = sanitizeBaseURL(rawBaseURL, DEFAULT_ZAI_BASE_URL, ALLOWED_ZAI_HOSTS);
     const url = `${baseURL}/embeddings`;
     
     try {

@@ -1,6 +1,14 @@
 import { ModelConfig } from '@/lib/types/model';
 
 /**
+ * 检查key是否是危险的prototype key
+ * 防止原型污染攻击
+ */
+function isDangerousKey(key: string): boolean {
+  return key === '__proto__' || key === 'constructor' || key === 'prototype';
+}
+
+/**
  * 推理强度控制类型 (保持兼容)
  */
 export type ReasoningControl =
@@ -97,6 +105,11 @@ export function deepMerge(
 ): Record<string, unknown> {
   for (const key in source) {
     if (source.hasOwnProperty(key)) {
+      // 防止原型污染：跳过危险的key
+      if (isDangerousKey(key)) {
+        continue;
+      }
+
       const sourceValue = source[key];
       const targetValue = target[key];
 
@@ -133,6 +146,14 @@ export function setDeep(
   obj: Record<string, unknown>
 ): void {
   const keys = path.split('.');
+
+  // 检查路径中是否包含危险的key
+  for (const key of keys) {
+    if (isDangerousKey(key)) {
+      throw new Error(`Invalid path: dangerous key "${key}" is not allowed`);
+    }
+  }
+
   let current: any = obj;
 
   // 遍历到倒数第二层

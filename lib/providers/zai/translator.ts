@@ -10,6 +10,14 @@ import {
 import { UnifiedMessage } from '@/lib/chat/protocols/unified-types';
 import { logger } from '@/lib/logger';
 
+/**
+ * 检查key是否是危险的prototype key
+ * 防止原型污染攻击
+ */
+function isDangerousKey(key: string): boolean {
+    return key === '__proto__' || key === 'constructor' || key === 'prototype';
+}
+
 export class ZaiTranslator implements ParameterTranslator<TranslatorInput, any> {
     /**
      * 翻译为 Zai OpenAI 兼容格式
@@ -192,6 +200,14 @@ export class ZaiTranslator implements ParameterTranslator<TranslatorInput, any> 
      */
     private setDeepValue(obj: any, path: string, value: any): void {
         const keys = path.split('.');
+
+        // 检查路径中是否包含危险的key，防止原型污染
+        for (const key of keys) {
+            if (isDangerousKey(key)) {
+                throw new Error(`Invalid path: dangerous key "${key}" is not allowed`);
+            }
+        }
+
         let current = obj;
         for (let i = 0; i < keys.length - 1; i++) {
             if (!current[keys[i]]) {

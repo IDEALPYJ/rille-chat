@@ -6,11 +6,36 @@ import { ProviderConfig } from '@/lib/types';
 import { ProtocolAdapter, BaseCallArgs, CheckResult, ModelInfo } from './base-protocol';
 import { UnifiedStreamEvent, StreamUsage } from './unified-types';
 import { logger } from '@/lib/logger';
+import { validateURL } from '@/lib/utils/url-validator';
+
+// Ollama默认地址
+const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
+
+/**
+ * 安全地获取Ollama基础URL
+ * Ollama允许本地地址，但需要验证格式
+ */
+function getSafeOllamaBaseURL(baseURL: string | undefined): string {
+  const url = baseURL || DEFAULT_OLLAMA_URL;
+
+  // 验证URL格式（Ollama允许本地地址）
+  const validation = validateURL(url);
+  if (!validation.valid && !url.includes('localhost') && !url.includes('127.0.0.1')) {
+    logger.warn('Invalid Ollama URL, using default', {
+      provided: url,
+      error: validation.error,
+    });
+    return DEFAULT_OLLAMA_URL;
+  }
+
+  return url;
+}
 
 export class OllamaProtocolAdapter implements ProtocolAdapter {
   async *call(args: BaseCallArgs): AsyncIterable<UnifiedStreamEvent> {
     const { messages, model, settings, providerConfig } = args;
-    const baseURL = providerConfig.baseURL || 'http://localhost:11434';
+    // 使用安全的URL验证
+    const baseURL = getSafeOllamaBaseURL(providerConfig.baseURL);
     const url = `${baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL}/api/chat`;
 
     try {
@@ -101,7 +126,8 @@ export class OllamaProtocolAdapter implements ProtocolAdapter {
 
   async check(config: ProviderConfig): Promise<CheckResult> {
     try {
-      const baseURL = config.baseURL || 'http://localhost:11434';
+      // 使用安全的URL验证
+      const baseURL = getSafeOllamaBaseURL(config.baseURL);
       const url = `${baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL}/api/tags`;
       const response = await fetch(url, { method: 'GET' });
 
@@ -120,7 +146,8 @@ export class OllamaProtocolAdapter implements ProtocolAdapter {
 
   async listModels(config: ProviderConfig): Promise<ModelInfo[]> {
     try {
-      const baseURL = config.baseURL || 'http://localhost:11434';
+      // 使用安全的URL验证
+      const baseURL = getSafeOllamaBaseURL(config.baseURL);
       const url = `${baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL}/api/tags`;
       const response = await fetch(url, { method: 'GET' });
 

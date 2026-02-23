@@ -15,6 +15,14 @@ import {
 import { logger } from '@/lib/logger';
 
 /**
+ * 检查key是否是危险的prototype key
+ * 防止原型污染攻击
+ */
+function isDangerousKey(key: string): boolean {
+  return key === '__proto__' || key === 'constructor' || key === 'prototype';
+}
+
+/**
  * OpenAI Responses API 参数翻译器
  */
 export class OpenAIResponsesTranslator implements ParameterTranslator<TranslatorInput, ResponsesAPIParams> {
@@ -182,6 +190,14 @@ export class OpenAIResponsesTranslator implements ParameterTranslator<Translator
    */
   private setDeepValue(obj: any, path: string, value: any): void {
     const keys = path.split('.');
+
+    // 检查路径中是否包含危险的key，防止原型污染
+    for (const key of keys) {
+      if (isDangerousKey(key)) {
+        throw new Error(`Invalid path: dangerous key "${key}" is not allowed`);
+      }
+    }
+
     let current = obj;
     for (let i = 0; i < keys.length - 1; i++) {
       if (!current[keys[i]]) {

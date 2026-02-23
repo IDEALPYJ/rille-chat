@@ -6,11 +6,26 @@
 
 import { logger } from "@/lib/logger";
 import { EmbeddingProvider, EmbeddingConfig } from "../types";
+import { validateURL } from "@/lib/utils/url-validator";
+
+// Ollama默认地址
+const DEFAULT_OLLAMA_URL = "http://localhost:11434";
 
 export class OllamaEmbeddingProvider implements EmbeddingProvider {
   private getBaseURL(config: EmbeddingConfig): string {
     // Ollama的embedding API路径与chat不同
-    const baseURL = config.baseURL || "http://localhost:11434";
+    const baseURL = config.baseURL || DEFAULT_OLLAMA_URL;
+
+    // 验证URL格式（Ollama允许本地地址）
+    const validation = validateURL(baseURL);
+    if (!validation.valid && !baseURL.includes('localhost') && !baseURL.includes('127.0.0.1')) {
+      logger.warn('Invalid Ollama baseURL, using default', {
+        provided: baseURL,
+        error: validation.error,
+      });
+      return DEFAULT_OLLAMA_URL.replace(/\/v1\/?$/, "");
+    }
+
     // 移除末尾的/v1（如果有），因为Ollama的embedding API在/api/embeddings
     return baseURL.replace(/\/v1\/?$/, "");
   }

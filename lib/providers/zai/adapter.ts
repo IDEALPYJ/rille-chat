@@ -10,6 +10,16 @@ import { UnifiedStreamEvent, StreamUsage } from '@/lib/chat/protocols/unified-ty
 import { CheckResult, ModelInfo, BaseCallArgs } from '@/lib/chat/protocols/base-protocol';
 import { logger } from '@/lib/logger';
 import { ZaiTranslator } from './translator';
+import { sanitizeBaseURL } from '@/lib/utils/url-validator';
+
+// 允许的ZAI域名列表
+const ALLOWED_ZAI_HOSTS = [
+  'open.bigmodel.cn',
+  '*.bigmodel.cn',
+];
+
+// 默认ZAI API地址
+const DEFAULT_ZAI_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4/';
 
 export class ZaiAdapter implements APIAdapter {
     private translator = new ZaiTranslator();
@@ -22,9 +32,11 @@ export class ZaiAdapter implements APIAdapter {
         providerConfig: ProviderConfig
     ): AsyncIterable<UnifiedStreamEvent> {
         // 创建 OpenAI 客户端
+        // 使用安全的URL验证
+        const safeBaseURL = sanitizeBaseURL(providerConfig.baseURL, DEFAULT_ZAI_BASE_URL, ALLOWED_ZAI_HOSTS);
         const clientOptions: any = {
             apiKey: providerConfig.apiKey,
-            baseURL: providerConfig.baseURL || 'https://open.bigmodel.cn/api/paas/v4/',
+            baseURL: safeBaseURL,
         };
 
         const client = new OpenAI(clientOptions);
@@ -198,7 +210,8 @@ export class ZaiAdapter implements APIAdapter {
      * 健康检查
      */
     async check(config: ProviderConfig): Promise<CheckResult> {
-        const finalBaseURL = config.baseURL || 'https://open.bigmodel.cn/api/paas/v4/';
+        // 使用安全的URL验证
+        const finalBaseURL = sanitizeBaseURL(config.baseURL, DEFAULT_ZAI_BASE_URL, ALLOWED_ZAI_HOSTS);
         const checkModel = config.checkModel || 'glm-4.7';
         const url = `${finalBaseURL}/chat/completions`;
 
