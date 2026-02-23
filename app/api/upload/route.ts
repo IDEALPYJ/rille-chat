@@ -575,7 +575,7 @@ async function processEmbedding(
           await Promise.all(
             vectorUpdates.map(({ chunkId, vectorStr, dimensions }) => {
               // 将 pgvector 格式 [1,2,3] 转换为 PostgreSQL 数组格式 {1,2,3}
-              const arrayStr = vectorStr.replace('[', '{').replace(']', '}');
+              const arrayStr = vectorStr.replace(/\[/g, '{').replace(/\]/g, '}');
               return tx.$executeRawUnsafe(
                 `UPDATE "DocumentChunk" SET "embedding_vector" = $1::real[], "embedding_dimensions" = $2 WHERE id = $3`,
                 arrayStr,

@@ -123,7 +123,10 @@ async function callMcpTool(
     };
 
     // 如果忽略SSL证书验证
+    // SECURITY WARNING: Only use ignoreSSL in development/testing environments.
+    // Disabling SSL verification in production can lead to man-in-the-middle attacks.
     if (plugin.advancedConfig.ignoreSSL && url.protocol === "https:") {
+      console.warn('[Security Warning] SSL certificate validation is disabled. This should only be used in development/testing environments.');
       const httpsAgent = new https.Agent({
         rejectUnauthorized: false,
       });
@@ -308,7 +311,10 @@ async function getMcpTools(plugin: McpPluginConfig): Promise<any[]> {
       fetch: customFetch,
     };
 
+    // SECURITY WARNING: Only use ignoreSSL in development/testing environments.
+    // Disabling SSL verification in production can lead to man-in-the-middle attacks.
     if (plugin.advancedConfig.ignoreSSL && url.protocol === "https:") {
+      console.warn('[Security Warning] SSL certificate validation is disabled. This should only be used in development/testing environments.');
       const httpsAgent = new https.Agent({
         rejectUnauthorized: false,
       });
