@@ -10,16 +10,52 @@ import { UnifiedStreamEvent, StreamUsage } from '@/lib/chat/protocols/unified-ty
 import { CheckResult, ModelInfo, BaseCallArgs } from '@/lib/chat/protocols/base-protocol';
 import { logger } from '@/lib/logger';
 import { ZaiTranslator } from './translator';
-import { sanitizeBaseURL } from '@/lib/utils/url-validator';
-
-// 允许的ZAI域名列表
-const ALLOWED_ZAI_HOSTS = [
-  'open.bigmodel.cn',
-  '*.bigmodel.cn',
-];
-
 // 默认ZAI API地址
 const DEFAULT_ZAI_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4/';
+
+/**
+ * 获取安全的baseURL
+ * 严格验证用户提供的URL，只允许特定的ZAI域名
+ */
+function getSafeBaseURL(userBaseURL: string | undefined): string {
+  if (!userBaseURL) {
+    return DEFAULT_ZAI_BASE_URL;
+  }
+
+  try {
+    const parsed = new URL(userBaseURL);
+
+    // 只允许HTTPS协议
+    if (parsed.protocol !== 'https:') {
+      logger.warn('Invalid protocol, using default ZAI baseURL', { protocol: parsed.protocol });
+      return DEFAULT_ZAI_BASE_URL;
+    }
+
+    // 严格检查允许的域名
+    const allowedDomains = ['open.bigmodel.cn'];
+    const isAllowed = allowedDomains.some(domain => {
+      return parsed.hostname === domain || parsed.hostname.endsWith('.' + domain);
+    });
+
+    if (!isAllowed) {
+      logger.warn('Domain not in allowlist, using default ZAI baseURL', {
+        hostname: parsed.hostname,
+      });
+      return DEFAULT_ZAI_BASE_URL;
+    }
+
+    // 清理尾部斜杠
+    let cleaned = userBaseURL;
+    while (cleaned.endsWith('/')) {
+      cleaned = cleaned.slice(0, -1);
+    }
+
+    return cleaned + '/';
+  } catch (error) {
+    logger.warn('Invalid baseURL format, using default ZAI baseURL', { error });
+    return DEFAULT_ZAI_BASE_URL;
+  }
+}
 
 export class ZaiAdapter implements APIAdapter {
     private translator = new ZaiTranslator();
@@ -33,7 +69,7 @@ export class ZaiAdapter implements APIAdapter {
     ): AsyncIterable<UnifiedStreamEvent> {
         // 创建 OpenAI 客户端
         // 使用安全的URL验证
-        const safeBaseURL = sanitizeBaseURL(providerConfig.baseURL, DEFAULT_ZAI_BASE_URL, ALLOWED_ZAI_HOSTS);
+        const safeBaseURL = getSafeBaseURL(providerConfig.baseURL);
         const clientOptions: any = {
             apiKey: providerConfig.apiKey,
             baseURL: safeBaseURL,
@@ -211,7 +247,7 @@ export class ZaiAdapter implements APIAdapter {
      */
     async check(config: ProviderConfig): Promise<CheckResult> {
         // 使用安全的URL验证
-        const finalBaseURL = sanitizeBaseURL(config.baseURL, DEFAULT_ZAI_BASE_URL, ALLOWED_ZAI_HOSTS);
+        const finalBaseURL = getSafeBaseURL(config.baseURL);
         const checkModel = config.checkModel || 'glm-4.7';
         const url = `${finalBaseURL}/chat/completions`;
 

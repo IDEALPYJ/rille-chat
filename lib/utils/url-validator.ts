@@ -85,8 +85,10 @@ export function buildSafeURL(baseURL: string, path: string): string {
   // 清理baseURL
   let cleanBase = baseURL.trim();
 
-  // 移除尾部斜杠
-  cleanBase = cleanBase.replace(/\/+$/, '');
+  // 移除尾部斜杠 - 使用简单循环代替正则，防止ReDoS
+  while (cleanBase.endsWith('/')) {
+    cleanBase = cleanBase.slice(0, -1);
+  }
 
   // 确保路径以/开头
   const cleanPath = path.startsWith('/') ? path : '/' + path;
@@ -120,6 +122,10 @@ export function sanitizeBaseURL(
     return defaultURL;
   }
 
-  // 清理URL
-  return baseURL.replace(/\/+$/, '');
+  // 清理URL - 使用简单循环代替正则，防止ReDoS
+  let cleaned = baseURL;
+  while (cleaned.endsWith('/')) {
+    cleaned = cleaned.slice(0, -1);
+  }
+  return cleaned;
 }
