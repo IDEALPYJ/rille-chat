@@ -167,6 +167,12 @@ export function setDeep(
 
   // 设置最后一层的值
   const lastKey = keys[keys.length - 1];
+
+  // 再次检查最后一个key（防御性编程）
+  if (isDangerousKey(lastKey)) {
+    throw new Error(`Invalid path: dangerous key "${lastKey}" is not allowed`);
+  }
+
   current[lastKey] = value;
 }
 

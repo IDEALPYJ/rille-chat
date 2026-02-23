@@ -7,9 +7,50 @@
 import { logger } from "@/lib/logger";
 import { EmbeddingProvider, EmbeddingConfig, EmbeddingInput } from "../types";
 
+// 默认火山引擎API地址
+const DEFAULT_VOLCENGINE_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
+
+/**
+ * 获取安全的火山引擎baseURL
+ * 严格验证用户提供的URL，只允许火山引擎域名
+ */
+function getSafeVolcengineBaseURL(userBaseURL: string | undefined): string {
+  if (!userBaseURL) {
+    return DEFAULT_VOLCENGINE_BASE_URL;
+  }
+
+  try {
+    const parsed = new URL(userBaseURL);
+
+    // 只允许HTTPS协议
+    if (parsed.protocol !== 'https:') {
+      logger.warn('Invalid protocol for Volcengine, using default', { protocol: parsed.protocol });
+      return DEFAULT_VOLCENGINE_BASE_URL;
+    }
+
+    // 严格检查允许的域名
+    const allowedDomains = ['volces.com', 'volcengine.com'];
+    const isAllowed = allowedDomains.some(domain => {
+      return parsed.hostname === domain || parsed.hostname.endsWith('.' + domain);
+    });
+
+    if (!isAllowed) {
+      logger.warn('Domain not in allowlist for Volcengine, using default', {
+        hostname: parsed.hostname,
+      });
+      return DEFAULT_VOLCENGINE_BASE_URL;
+    }
+
+    return userBaseURL;
+  } catch (error) {
+    logger.warn('Invalid baseURL format for Volcengine, using default', { error });
+    return DEFAULT_VOLCENGINE_BASE_URL;
+  }
+}
+
 export class VolcengineVisionEmbeddingProvider implements EmbeddingProvider {
   private getBaseURL(config: EmbeddingConfig): string {
-    return config.baseURL || "https://ark.cn-beijing.volces.com/api/v3";
+    return getSafeVolcengineBaseURL(config.baseURL);
   }
 
   /**

@@ -7,9 +7,50 @@
 import { logger } from "@/lib/logger";
 import { EmbeddingProvider, EmbeddingConfig } from "../types";
 
+// 默认阿里云API地址
+const DEFAULT_ALIYUN_EMBEDDING_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+
+/**
+ * 获取安全的阿里云embedding baseURL
+ * 严格验证用户提供的URL，只允许阿里云域名
+ */
+function getSafeAliyunEmbeddingBaseURL(userBaseURL: string | undefined): string {
+  if (!userBaseURL) {
+    return DEFAULT_ALIYUN_EMBEDDING_BASE_URL;
+  }
+
+  try {
+    const parsed = new URL(userBaseURL);
+
+    // 只允许HTTPS协议
+    if (parsed.protocol !== 'https:') {
+      logger.warn('Invalid protocol for Aliyun embedding, using default', { protocol: parsed.protocol });
+      return DEFAULT_ALIYUN_EMBEDDING_BASE_URL;
+    }
+
+    // 严格检查允许的域名
+    const allowedDomains = ['aliyuncs.com', 'aliyun.com'];
+    const isAllowed = allowedDomains.some(domain => {
+      return parsed.hostname === domain || parsed.hostname.endsWith('.' + domain);
+    });
+
+    if (!isAllowed) {
+      logger.warn('Domain not in allowlist for Aliyun embedding, using default', {
+        hostname: parsed.hostname,
+      });
+      return DEFAULT_ALIYUN_EMBEDDING_BASE_URL;
+    }
+
+    return userBaseURL;
+  } catch (error) {
+    logger.warn('Invalid baseURL format for Aliyun embedding, using default', { error });
+    return DEFAULT_ALIYUN_EMBEDDING_BASE_URL;
+  }
+}
+
 export class AliyunTextEmbeddingProvider implements EmbeddingProvider {
   private getBaseURL(config: EmbeddingConfig): string {
-    return config.baseURL || "https://dashscope.aliyuncs.com/compatible-mode/v1";
+    return getSafeAliyunEmbeddingBaseURL(config.baseURL);
   }
 
   async getEmbedding(text: string, config: EmbeddingConfig): Promise<number[]> {
