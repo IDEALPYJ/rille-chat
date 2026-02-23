@@ -10,6 +10,58 @@ import { CheckResult, ModelInfo, BaseCallArgs } from '@/lib/chat/protocols/base-
 import { logger } from '@/lib/logger';
 import { BailianTranslator } from './translator';
 
+// 默认Bailian API地址
+const DEFAULT_BAILIAN_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+
+/**
+ * 获取安全的Bailian baseURL
+ * 严格验证用户提供的URL，只允许阿里云域名
+ */
+function getSafeBailianBaseURL(userBaseURL: string | undefined): string {
+  if (!userBaseURL) {
+    return DEFAULT_BAILIAN_BASE_URL;
+  }
+
+  try {
+    const parsed = new URL(userBaseURL);
+
+    // 只允许HTTPS协议
+    if (parsed.protocol !== 'https:') {
+      logger.warn('Invalid protocol for Bailian, using default', { protocol: parsed.protocol });
+      return DEFAULT_BAILIAN_BASE_URL;
+    }
+
+    // 严格检查允许的域名
+    const allowedDomains = ['dashscope.aliyuncs.com', 'aliyun.com', 'aliyuncs.com'];
+    const isAllowed = allowedDomains.some(domain => {
+      return parsed.hostname === domain || parsed.hostname.endsWith('.' + domain);
+    });
+
+    if (!isAllowed) {
+      logger.warn('Domain not in allowlist for Bailian, using default', {
+        hostname: parsed.hostname,
+      });
+      return DEFAULT_BAILIAN_BASE_URL;
+    }
+
+    // 处理路径转换
+    let cleaned = userBaseURL;
+    if (cleaned.includes('/api/v1')) {
+      cleaned = cleaned.replace('/api/v1', '/compatible-mode/v1');
+    }
+
+    // 清理尾部斜杠
+    while (cleaned.endsWith('/')) {
+      cleaned = cleaned.slice(0, -1);
+    }
+
+    return cleaned;
+  } catch (error) {
+    logger.warn('Invalid baseURL format for Bailian, using default', { error });
+    return DEFAULT_BAILIAN_BASE_URL;
+  }
+}
+
 export class BailianAdapter implements APIAdapter {
     private translator = new BailianTranslator();
 
@@ -240,9 +292,10 @@ export class BailianAdapter implements APIAdapter {
      * 健康检查
      */
     async check(config: any): Promise<CheckResult> {
-        const { apiKey, baseURL, checkModel } = config;
+        const { apiKey, checkModel } = config;
         
-        const finalBaseURL = baseURL?.replace('/api/v1', '/compatible-mode/v1') || "https://dashscope.aliyuncs.com/compatible-mode/v1";
+        // 使用安全的URL验证
+        const finalBaseURL = getSafeBailianBaseURL(config.baseURL);
         const url = `${finalBaseURL}/chat/completions`;
 
         try {

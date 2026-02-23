@@ -9,6 +9,73 @@ import { UnifiedStreamEvent, StreamUsage } from '@/lib/chat/protocols/unified-ty
 import { CheckResult, ModelInfo, BaseCallArgs } from '@/lib/chat/protocols/base-protocol';
 import { logger } from '@/lib/logger';
 import { AnthropicTranslator } from './translator';
+
+// 默认Anthropic API地址
+const DEFAULT_ANTHROPIC_BASE_URL = 'https://api.anthropic.com';
+const DEFAULT_MINIMAX_BASE_URL = 'https://api.minimaxi.com/anthropic';
+
+/**
+ * 获取安全的Anthropic baseURL
+ * 严格验证用户提供的URL，只允许特定的域名
+ */
+function getSafeAnthropicBaseURL(userBaseURL: string | undefined): string {
+  if (!userBaseURL) {
+    return DEFAULT_ANTHROPIC_BASE_URL;
+  }
+
+  try {
+    const parsed = new URL(userBaseURL);
+
+    // 只允许HTTPS协议
+    if (parsed.protocol !== 'https:') {
+      logger.warn('Invalid protocol for Anthropic, using default', { protocol: parsed.protocol });
+      return DEFAULT_ANTHROPIC_BASE_URL;
+    }
+
+    // 检查是否是MiniMax端点
+    const isMinimax = userBaseURL.includes('minimaxi') || userBaseURL.includes('minimax');
+
+    if (isMinimax) {
+      // MiniMax端点验证
+      const allowedDomains = ['minimaxi.com', 'minimax.chat'];
+      const isAllowed = allowedDomains.some(domain => {
+        return parsed.hostname === domain || parsed.hostname.endsWith('.' + domain);
+      });
+
+      if (!isAllowed) {
+        logger.warn('Domain not in allowlist for MiniMax, using default', {
+          hostname: parsed.hostname,
+        });
+        return DEFAULT_MINIMAX_BASE_URL;
+      }
+    } else {
+      // Anthropic端点验证
+      const allowedDomains = ['api.anthropic.com', 'anthropic.com'];
+      const isAllowed = allowedDomains.some(domain => {
+        return parsed.hostname === domain || parsed.hostname.endsWith('.' + domain);
+      });
+
+      if (!isAllowed) {
+        logger.warn('Domain not in allowlist for Anthropic, using default', {
+          hostname: parsed.hostname,
+        });
+        return DEFAULT_ANTHROPIC_BASE_URL;
+      }
+    }
+
+    // 清理尾部斜杠
+    let cleaned = userBaseURL;
+    while (cleaned.endsWith('/')) {
+      cleaned = cleaned.slice(0, -1);
+    }
+
+    return cleaned;
+  } catch (error) {
+    logger.warn('Invalid baseURL format for Anthropic, using default', { error });
+    return DEFAULT_ANTHROPIC_BASE_URL;
+  }
+}
+
 function isMinimaxEndpoint(baseURL: string): boolean {
   return !!baseURL && (baseURL.includes('minimaxi') || baseURL.includes('minimax'));
 }
@@ -490,13 +557,14 @@ export class AnthropicAdapter implements APIAdapter {
 
   async check(config: ProviderConfig): Promise<CheckResult> {
     try {
-      const isMinimax = config.baseURL?.includes('minimaxi') || config.baseURL?.includes('minimax');
+      // 使用安全的URL验证
+      let baseURL = getSafeAnthropicBaseURL(config.baseURL);
+      const isMinimax = isMinimaxEndpoint(baseURL);
       const targetModel = config.checkModel || (isMinimax ? 'MiniMax-M2.1' : 'claude-3-5-sonnet-20241022');
-      let baseURL = config.baseURL || 'https://api.anthropic.com';
 
       // MiniMax 旧 baseURL (minimax.chat/v1) 为 OpenAI 兼容接口，Anthropic 兼容需用 minimaxi.com/anthropic
-      if (isMinimax && (!baseURL || baseURL.includes('minimax.chat'))) {
-        baseURL = 'https://api.minimaxi.com/anthropic';
+      if (isMinimax && baseURL.includes('minimax.chat')) {
+        baseURL = DEFAULT_MINIMAX_BASE_URL;
       }
 
       if (baseURL.endsWith('/')) baseURL = baseURL.slice(0, -1);

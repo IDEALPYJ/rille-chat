@@ -10,6 +10,53 @@ import { CheckResult, ModelInfo, BaseCallArgs } from '@/lib/chat/protocols/base-
 import { logger } from '@/lib/logger';
 import { GeminiTranslator } from './translator';
 
+// 默认Gemini API地址
+const DEFAULT_GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com';
+
+/**
+ * 获取安全的Gemini baseURL
+ * 严格验证用户提供的URL，只允许Google API域名
+ */
+function getSafeGeminiBaseURL(userBaseURL: string | undefined): string {
+  if (!userBaseURL) {
+    return DEFAULT_GEMINI_BASE_URL;
+  }
+
+  try {
+    const parsed = new URL(userBaseURL);
+
+    // 只允许HTTPS协议
+    if (parsed.protocol !== 'https:') {
+      logger.warn('Invalid protocol for Gemini, using default', { protocol: parsed.protocol });
+      return DEFAULT_GEMINI_BASE_URL;
+    }
+
+    // 严格检查允许的域名
+    const allowedDomains = ['generativelanguage.googleapis.com', 'googleapis.com'];
+    const isAllowed = allowedDomains.some(domain => {
+      return parsed.hostname === domain || parsed.hostname.endsWith('.' + domain);
+    });
+
+    if (!isAllowed) {
+      logger.warn('Domain not in allowlist for Gemini, using default', {
+        hostname: parsed.hostname,
+      });
+      return DEFAULT_GEMINI_BASE_URL;
+    }
+
+    // 清理尾部斜杠
+    let cleaned = userBaseURL;
+    while (cleaned.endsWith('/')) {
+      cleaned = cleaned.slice(0, -1);
+    }
+
+    return cleaned;
+  } catch (error) {
+    logger.warn('Invalid baseURL format for Gemini, using default', { error });
+    return DEFAULT_GEMINI_BASE_URL;
+  }
+}
+
 export class GeminiAdapter implements APIAdapter {
   private translator = new GeminiTranslator();
 
@@ -18,9 +65,8 @@ export class GeminiAdapter implements APIAdapter {
     providerConfig: ProviderConfig
   ): AsyncIterable<UnifiedStreamEvent> {
     const apiKey = providerConfig.apiKey;
-    const baseURL =
-      (providerConfig.baseURL || 'https://generativelanguage.googleapis.com').replace(/\/$/, '') +
-      '/v1beta';
+    // 使用安全的URL验证
+    const baseURL = getSafeGeminiBaseURL(providerConfig.baseURL) + '/v1beta';
 
     // 构建请求体
     let requestBody: any;
@@ -220,9 +266,8 @@ export class GeminiAdapter implements APIAdapter {
   async check(config: ProviderConfig): Promise<CheckResult> {
     try {
       const targetModel = config.checkModel || 'gemini-1.5-flash-latest';
-      const base =
-        (config.baseURL || 'https://generativelanguage.googleapis.com').replace(/\/$/, '') +
-        '/v1beta';
+      // 使用安全的URL验证
+      const base = getSafeGeminiBaseURL(config.baseURL) + '/v1beta';
       const url = `${base}/models/${targetModel}:generateContent?key=${config.apiKey}`;
 
       const res = await fetch(url, {
@@ -250,9 +295,8 @@ export class GeminiAdapter implements APIAdapter {
 
   async listModels(config: ProviderConfig): Promise<ModelInfo[]> {
     try {
-      const base =
-        (config.baseURL || 'https://generativelanguage.googleapis.com').replace(/\/$/, '') +
-        '/v1beta';
+      // 使用安全的URL验证
+      const base = getSafeGeminiBaseURL(config.baseURL) + '/v1beta';
       const models: ModelInfo[] = [];
       let pageToken = '';
 
