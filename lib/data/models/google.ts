@@ -2,7 +2,7 @@ import { ModelConfig } from '@/lib/types/model';
 
 export const googleModelConfigs: ModelConfig[] = [
     {
-        id: "gemini-3-1-pro-preview",
+        id: "gemini-3.1-pro-preview",
         displayName: "Gemini 3.1 Pro",
         avatar: "gemini",
         releasedAt: "2026-02-19",
