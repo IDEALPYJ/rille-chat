@@ -625,7 +625,7 @@ export function Sidebar({ className, user, isCollapsed = false, toggleSidebar, s
                 {t("sidebar.settings")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-xs h-7 rounded-[6px]" onClick={() => signOut()}>
+              <DropdownMenuItem className="text-xs h-7 rounded-[6px]" onClick={() => signOut({ callbackUrl: '/login' })}>
                 <LogOut className="mr-2 h-3.5 w-3.5" strokeWidth={1.5} />
                 {t("sidebar.logout")}
               </DropdownMenuItem>

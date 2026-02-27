@@ -45,6 +45,7 @@ export function ImageGenerationView() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isSubmittingRef = useRef(false);
 
   // 从URL同步sessionId
   useEffect(() => {
@@ -98,8 +99,9 @@ export function ImageGenerationView() {
   };
 
   const handleSubmit = async (options: ImageGenerationParams) => {
-    if (!inputValue.trim() || isLoading) return;
-
+    if (!inputValue.trim() || isLoading || isSubmittingRef.current) return;
+    
+    isSubmittingRef.current = true;
     setInputValue("");
     setIsLoading(true);
 
@@ -166,6 +168,15 @@ export function ImageGenerationView() {
 
     // 创建AI消息占位符
     const assistantMessageId = crypto.randomUUID();
+    
+    // 创建初始 images 数组，包含 pending 状态的占位符
+    const initialImages = isStreamMode 
+      ? []
+      : Array.from({ length: options.count || 1 }, () => ({
+          url: '',
+          status: 'pending' as const,
+        }));
+    
     const assistantPlaceholder: Message = {
       id: assistantMessageId,
       role: 'assistant',
@@ -177,9 +188,9 @@ export function ImageGenerationView() {
           })
         : JSON.stringify({
             type: 'image_generation',
-            images: [],
-            count: options.count,
+            images: initialImages,
             aspectRatio: actualAspectRatio,
+            count: options.count || 1,
           }),
       parentId: userMessageId,
       model: selectedModel || undefined,
@@ -269,12 +280,28 @@ export function ImageGenerationView() {
 
         const data = await response.json();
         
+        // 使用后端返回的 content（已经是新格式）
+        const returnedContent = data.content;
+        let completedImages;
+        
+        if (returnedContent && returnedContent.images) {
+          // 后端返回的是新格式
+          completedImages = returnedContent.images;
+        } else {
+          // 兼容旧格式：将返回的图片填充到 pending 占位符中
+          const returnedImages = data.images || [];
+          completedImages = initialImages.map((img, index) => ({
+            url: returnedImages[index] || '',
+            status: returnedImages[index] ? ('completed' as const) : ('error' as const),
+            error: returnedImages[index] ? undefined : '生成失败',
+          }));
+        }
+
         // 更新AI消息内容
         const imageContent = JSON.stringify({
           type: 'image_generation',
-          images: data.images || [],
-          count: options.count,
-          aspectRatio: actualAspectRatio,
+          images: completedImages,
+          aspectRatio: returnedContent?.aspectRatio || actualAspectRatio,
         });
 
         setAllMessages(prev => updateMessageInTree(prev, assistantMessageId, {
@@ -316,6 +343,7 @@ export function ImageGenerationView() {
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
+      isSubmittingRef.current = false;
     }
   };
 
@@ -581,27 +609,46 @@ export function ImageGenerationView() {
       return;
     }
 
-    // 从AI消息的content中解析选项信息
+    // 从AI消息的content中解析选项信息和现有图片
     let aspectRatio = "1:1";
     let count = 1;
-    let referenceImage: string | null = null;
+    let referenceImages: string[] = [];
+    let existingImages: Array<{ url: string; status: string; error?: string }> = [];
 
     try {
       const parsed = JSON.parse(messageToRegenerate.content || "{}");
       if (parsed.type === 'image_generation') {
         aspectRatio = parsed.aspectRatio || "1:1";
         count = parsed.count || 1;
+        // 保留现有的图片（过滤掉之前的错误项）
+        existingImages = (parsed.images || []).filter((img: any) => img.status === 'completed');
       }
     } catch {
       // 解析失败，使用默认值
     }
 
-    // 从用户消息的requestParams获取referenceImage
-    if (parentMessage.requestParams?.referenceImage) {
-      referenceImage = parentMessage.requestParams.referenceImage as string;
+    // 从用户消息的requestParams获取referenceImages
+    if (parentMessage.requestParams?.referenceImages) {
+      referenceImages = parentMessage.requestParams.referenceImages as string[];
+    } else if (parentMessage.requestParams?.referenceImage) {
+      referenceImages = [parentMessage.requestParams.referenceImage as string];
     }
 
     setIsLoading(true);
+
+    // 在现有图片末尾添加新的 pending 占位符
+    const imagesWithPending = [...existingImages, { url: '', status: 'pending' as const }];
+    
+    // 更新消息状态，添加 pending 占位符，清除错误信息
+    setAllMessages(prev => updateMessageInTree(prev, messageId, {
+      status: 'pending',
+      error: undefined, // 清除错误信息
+      content: JSON.stringify({
+        type: 'image_generation',
+        images: imagesWithPending,
+        aspectRatio: aspectRatio,
+      }),
+    }));
 
     // 创建AbortController
     const controller = new AbortController();
@@ -615,13 +662,12 @@ export function ImageGenerationView() {
         },
         body: JSON.stringify({
           prompt: parentMessage.content,
-          count: count,
+          count: 1, // 重新生成只生成1张
           aspectRatio: aspectRatio,
-          referenceImage: referenceImage,
+          referenceImages: referenceImages,
           sessionId: currentSessionId,
           provider: selectedProvider || messageToRegenerate.provider,
           model: selectedModel || messageToRegenerate.model,
-          updateMessageId: messageId,
         }),
         signal: controller.signal,
       });
@@ -643,11 +689,24 @@ export function ImageGenerationView() {
 
       const data = await response.json();
       
-      // API已经更新了数据库，现在更新前端状态
+      // 获取返回的图片
+      const returnedImages = data.images || [];
+      const newImageUrl = returnedImages[0] || '';
+      
+      // 更新最后一个 pending 项为完成或错误状态
+      const updatedImages = imagesWithPending.map((img, index) => {
+        if (index === imagesWithPending.length - 1 && img.status === 'pending') {
+          return newImageUrl 
+            ? { url: newImageUrl, status: 'completed' as const }
+            : { url: '', status: 'error' as const, error: '生成失败' };
+        }
+        return img;
+      });
+      
+      // 更新前端消息状态为完成
       const imageContent = JSON.stringify({
         type: 'image_generation',
-        images: data.images || [],
-        count: data.count || data.images?.length || 0,
+        images: updatedImages,
         aspectRatio: aspectRatio,
       });
 
@@ -667,13 +726,31 @@ export function ImageGenerationView() {
       window.dispatchEvent(new CustomEvent('refresh-sessions'));
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        // 用户取消了请求，不做任何操作
+        // 用户取消了请求，移除 pending 占位符
+        setAllMessages(prev => updateMessageInTree(prev, messageId, {
+          content: JSON.stringify({
+            type: 'image_generation',
+            images: existingImages,
+            aspectRatio: aspectRatio,
+          }),
+        }));
       } else {
         console.error("图像重新生成失败:", error);
-        // 更新消息状态为错误
+        // 更新最后一个 pending 项为错误状态
+        const updatedImages = imagesWithPending.map((img, index) => {
+          if (index === imagesWithPending.length - 1 && img.status === 'pending') {
+            return { url: '', status: 'error' as const, error: error.message || "生成失败" };
+          }
+          return img;
+        });
+        
         setAllMessages(prev => updateMessageInTree(prev, messageId, {
-          status: 'error',
-          error: error.message || "图像生成失败，请重试",
+          status: 'completed', // 保持 completed 状态以显示图片
+          content: JSON.stringify({
+            type: 'image_generation',
+            images: updatedImages,
+            aspectRatio: aspectRatio,
+          }),
         }));
       }
     } finally {

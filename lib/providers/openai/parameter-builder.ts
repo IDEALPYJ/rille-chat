@@ -22,17 +22,23 @@ export class OpenAIParameterBuilder
     const body: OpenAIImageGenerationBody = {
       model: request.model,
       prompt: request.prompt,
-      response_format: 'url',
     };
+
+    // 只有 DALL-E 系列支持 response_format 参数
+    // gpt-image 系列总是返回 base64，不支持此参数
+    if (!this.isGptImageModel(request.model)) {
+      body.response_format = 'url';
+    }
 
     // 处理生成数量
     if (request.count && request.count > 1) {
       body.n = Math.min(request.count, this.getMaxN(request.model));
     }
 
-    // 处理尺寸
-    if (request.size) {
-      body.size = this.normalizeSize(request.size);
+    // 处理尺寸 - 优先使用 size，否则使用 aspectRatio
+    const sizeValue = request.size || request.aspectRatio;
+    if (sizeValue) {
+      body.size = this.normalizeSize(sizeValue, request.model);
     }
 
     // 处理质量参数
@@ -80,8 +86,13 @@ export class OpenAIParameterBuilder
       model: request.model,
       prompt: request.prompt,
       image: imageBase64,
-      response_format: 'url',
     };
+
+    // 只有 DALL-E 系列支持 response_format 参数
+    // gpt-image 系列总是返回 base64，不支持此参数
+    if (!this.isGptImageModel(request.model)) {
+      body.response_format = 'url';
+    }
 
     if (maskBase64) {
       body.mask = maskBase64;
@@ -91,8 +102,10 @@ export class OpenAIParameterBuilder
       body.n = Math.min(request.count, this.getMaxN(request.model));
     }
 
-    if (request.size) {
-      body.size = this.normalizeSize(request.size);
+    // 处理尺寸 - 优先使用 size，否则使用 aspectRatio
+    const editSizeValue = request.size || request.aspectRatio;
+    if (editSizeValue) {
+      body.size = this.normalizeSize(editSizeValue, request.model);
     }
 
     return body;
@@ -108,15 +121,22 @@ export class OpenAIParameterBuilder
     const body: OpenAIImageVariationBody = {
       model: request.model,
       image: imageBase64,
-      response_format: 'url',
     };
+
+    // 只有 DALL-E 系列支持 response_format 参数
+    // gpt-image 系列总是返回 base64，不支持此参数
+    if (!this.isGptImageModel(request.model)) {
+      body.response_format = 'url';
+    }
 
     if (request.count && request.count > 1) {
       body.n = Math.min(request.count, this.getMaxN(request.model));
     }
 
-    if (request.size) {
-      body.size = this.normalizeSize(request.size);
+    // 处理尺寸 - 优先使用 size，否则使用 aspectRatio
+    const variationSizeValue = request.size || request.aspectRatio;
+    if (variationSizeValue) {
+      body.size = this.normalizeSize(variationSizeValue, request.model);
     }
 
     return body;
@@ -131,7 +151,7 @@ export class OpenAIParameterBuilder
     // 验证尺寸
     if (request.size) {
       const validSizes = this.getValidSizes(model);
-      const normalizedSize = this.normalizeSize(request.size);
+      const normalizedSize = this.normalizeSize(request.size, model);
 
       if (!this.isGptImageModel(model) && !validSizes.includes(normalizedSize)) {
         throw new Error(
@@ -153,9 +173,45 @@ export class OpenAIParameterBuilder
 
   /**
    * 标准化尺寸格式
+   * 支持比例值（如 1:1）和像素值（如 1024×1024）
    */
-  private normalizeSize(size: string): string {
-    return size.replace(/[×*]/g, 'x');
+  private normalizeSize(size: string, model: string): string {
+    // 如果已经是像素格式（包含数字x数字），直接替换分隔符
+    if (/^\d+\s*[×*xX]\s*\d+$/.test(size)) {
+      return size.replace(/[×*]/g, 'x').replace(/\s/g, '');
+    }
+
+    // 处理比例值（如 1:1, 16:9）
+    const ratioMap: Record<string, string> = {
+      '1:1': '1024x1024',
+      '16:9': '1536x1024',
+      '4:3': '1536x1024',
+      '3:4': '1024x1536',
+      '9:16': '1024x1536',
+    };
+
+    // 清理比例值（移除空格）
+    const cleanRatio = size.replace(/\s/g, '');
+
+    // 对于 gpt-image 模型，使用 gpt-image 支持的尺寸
+    if (this.isGptImageModel(model)) {
+      return ratioMap[cleanRatio] || OPENAI_SIZE_LIMITS.GPT_IMAGE_SIZES[0];
+    }
+
+    // 对于 dall-e 模型，使用对应的尺寸
+    if (model.includes(OPENAI_MODELS.DALL_E_3)) {
+      const dalle3Map: Record<string, string> = {
+        '1:1': '1024x1024',
+        '16:9': '1792x1024',
+        '4:3': '1792x1024',
+        '3:4': '1024x1792',
+        '9:16': '1024x1792',
+      };
+      return dalle3Map[cleanRatio] || OPENAI_SIZE_LIMITS.DALL_E_3_SIZES[0];
+    }
+
+    // 默认使用 dall-e-2 尺寸
+    return ratioMap[cleanRatio] || OPENAI_SIZE_LIMITS.DALL_E_2_SIZES[2];
   }
 
   /**

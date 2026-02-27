@@ -257,8 +257,8 @@ export const MessageRow = memo(({
               ) : (
                 /* AI消息内容区域 - 统一使用space-y-2容器 */
                 <div className="space-y-2 w-full">
-                  {/* 错误提示卡片 */}
-                  {!isUser && message.status === 'error' && (
+                  {/* 错误提示卡片 - 非图片消息显示在上方 */}
+                  {!isUser && message.status === 'error' && !isImageMessage && (
                     <div className="w-full rounded-lg border border-destructive/20 bg-destructive/10 p-3">
                       <div className="mb-1 text-[10px] font-bold tracking-wider text-destructive uppercase font-mono">
                         {message.errorCode || 'ERROR'}

@@ -22,6 +22,7 @@ interface ActionButtonProps {
   onStopRecording: () => void;
   onStartRecording: () => void;
   onStop: () => void;
+  onSubmit?: () => void;
 }
 
 export function ActionButton({
@@ -36,6 +37,7 @@ export function ActionButton({
   onStopRecording,
   onStartRecording,
   onStop,
+  onSubmit,
 }: ActionButtonProps) {
   if (isRecording) {
     return (
@@ -86,9 +88,10 @@ export function ActionButton({
     const isDisabled = isUploading || hasError;
     return (
       <Button
-        type="submit"
+        type="button"
         size="icon"
         disabled={isDisabled}
+        onClick={onSubmit}
         className={cn(
             "absolute right-[6px] bottom-[6px] md:right-[7px] md:bottom-[7px] h-[36px] w-[36px] md:h-[42px] md:w-[42px] rounded-full shrink-0 transition-colors z-10",
           isDisabled
@@ -119,7 +122,7 @@ export function ActionButton({
 
   return (
     <Button
-      type="submit"
+      type="button"
       size="icon"
       disabled
       className="absolute right-[6px] bottom-[6px] md:right-[7px] md:bottom-[7px] h-[36px] w-[36px] md:h-[42px] md:w-[42px] rounded-full shrink-0 bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed z-10"

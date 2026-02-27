@@ -1346,11 +1346,7 @@ export function ImageInput({
           </div>
 
           {/* 输入框 */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleFormSubmit();
-            }}
+          <div
             className={cn(
               "relative flex items-end border bg-white dark:bg-[#111114] overflow-hidden transition-all duration-200",
               "rounded-[24px] md:rounded-[28px]",
@@ -1394,8 +1390,9 @@ export function ImageInput({
               onStopRecording={stopRecording}
               onStartRecording={startRecording}
               onStop={onStop || (() => { })}
+              onSubmit={handleFormSubmit}
             />
-          </form>
+          </div>
         </div>
       </div>
       <AlertToast

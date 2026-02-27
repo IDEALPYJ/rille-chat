@@ -109,6 +109,15 @@ export class OpenAIImageAdapter extends BatchingImageAdapter {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout: OpenAI API call took too long');
       }
+      // 记录详细的 fetch 错误信息
+      if (error instanceof Error) {
+        logger.error('OpenAI fetch error', {
+          error: error.message,
+          errorName: error.name,
+          url,
+          model: body.model,
+        });
+      }
       throw error;
     }
   }
@@ -167,7 +176,13 @@ export class OpenAIImageAdapter extends BatchingImageAdapter {
         formData.append('size', body.size);
       }
 
-      formData.append('response_format', 'url');
+      // 只有 DALL-E 系列支持 response_format 参数
+      // gpt-image 系列总是返回 base64，不支持此参数
+      const isGptImageModel = body.model.includes('gpt-image') ||
+                               body.model.includes('chatgpt-image');
+      if (!isGptImageModel) {
+        formData.append('response_format', 'url');
+      }
 
       const response = await fetch(url, {
         method: 'POST',
@@ -231,7 +246,13 @@ export class OpenAIImageAdapter extends BatchingImageAdapter {
         formData.append('size', body.size);
       }
 
-      formData.append('response_format', 'url');
+      // 只有 DALL-E 系列支持 response_format 参数
+      // gpt-image 系列总是返回 base64，不支持此参数
+      const isGptImageModel = body.model.includes('gpt-image') ||
+                               body.model.includes('chatgpt-image');
+      if (!isGptImageModel) {
+        formData.append('response_format', 'url');
+      }
 
       const response = await fetch(url, {
         method: 'POST',

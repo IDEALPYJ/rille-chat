@@ -349,10 +349,13 @@ export async function POST(req: Request) {
     }
 
     // 8. 创建消息内容
-    // 使用前端期望的格式：{type: 'image_generation', images: [], aspectRatio: '', prompt: ''}
+    // 使用前端期望的格式：{type: 'image_generation', images: [{url, status}], aspectRatio: '', prompt: ''}
     const imageGenerationContent = {
       type: 'image_generation' as const,
-      images: localImageUrls,
+      images: localImageUrls.map(url => ({
+        url,
+        status: 'completed' as const,
+      })),
       aspectRatio: aspectRatio,
       prompt: prompt,
     };
@@ -393,14 +396,24 @@ export async function POST(req: Request) {
       },
     });
 
-    // 10. 如果有 updateMessageId，更新原消息
+    // 10. 如果有 updateMessageId，尝试更新原消息状态
+    // 注意：如果消息不存在（可能是前端临时消息），则忽略错误
     if (updateMessageId) {
-      await db.message.update({
-        where: { id: updateMessageId },
-        data: {
-          status: 'completed',
-        },
-      });
+      try {
+        await db.message.update({
+          where: { id: updateMessageId },
+          data: {
+            status: 'completed',
+          },
+        });
+      } catch (error: any) {
+        // 如果消息不存在，记录日志但不抛出错误
+        if (error.code === 'P2025') {
+          logger.debug('Message to update not found, skipping update', { updateMessageId });
+        } else {
+          throw error;
+        }
+      }
     }
 
     return NextResponse.json({
