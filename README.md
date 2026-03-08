@@ -21,6 +21,10 @@
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker" alt="Docker">
 </p>
 
+<p>
+ <img src="./public/imgs/chat_interface.png" alt="Rille Chat Chat Interface">
+</p>
+
 <p align="center">
   <a href="#features">Features</a> •
   <a href="#quick-start">Quick Start</a> •

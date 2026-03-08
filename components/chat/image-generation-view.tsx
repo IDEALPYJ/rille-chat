@@ -50,6 +50,7 @@ export function ImageGenerationView() {
   // 从URL同步sessionId
   useEffect(() => {
     const id = searchParams.get("id");
+    console.log("[DEBUG] searchParams changed, new id:", id);
     setCurrentSessionId(id);
   }, [searchParams]);
 
@@ -64,6 +65,11 @@ export function ImageGenerationView() {
         setAllMessages(messages);
         
         const latestLeaf = findLatestLeaf(messages);
+        console.log("[DEBUG] loadHistory - latestLeaf:", latestLeaf);
+        console.log("[DEBUG] loadHistory - messages count:", messages.length);
+        messages.forEach((m: Message, i: number) => {
+          console.log(`[DEBUG] message ${i}: role=${m.role}, id=${m.id?.substring(0, 8)}, parentId=${m.parentId?.substring(0, 8)}, childrenIds=${m.childrenIds?.length}`);
+        });
         setCurrentLeafId(latestLeaf);
       }
     } catch (error) {
@@ -75,13 +81,20 @@ export function ImageGenerationView() {
 
   // 当sessionId改变时加载历史
   useEffect(() => {
+    console.log("[DEBUG] useEffect currentSessionId changed:", currentSessionId);
     if (currentSessionId) {
       loadHistory(currentSessionId);
     } else {
+      console.log("[DEBUG] currentSessionId is null, resetting states");
       setAllMessages([]);
       setCurrentLeafId(null);
     }
   }, [currentSessionId]);
+
+  // 监听 currentLeafId 的变化
+  useEffect(() => {
+    console.log("[DEBUG] currentLeafId changed:", currentLeafId);
+  }, [currentLeafId]);
 
   // 获取当前分支的消息
   const messages = currentLeafId ? getMessageBranch(allMessages, currentLeafId) : [];
@@ -101,6 +114,8 @@ export function ImageGenerationView() {
   const handleSubmit = async (options: ImageGenerationParams) => {
     if (!inputValue.trim() || isLoading || isSubmittingRef.current) return;
     
+    console.log("[DEBUG] handleSubmit - currentLeafId:", currentLeafId);
+    
     isSubmittingRef.current = true;
     setInputValue("");
     setIsLoading(true);
@@ -119,13 +134,27 @@ export function ImageGenerationView() {
       }
     }
 
+    // 如果 currentLeafId 为 null，尝试从 allMessages 中找到最后一个 assistant 消息
+    let effectiveParentId = currentLeafId;
+    console.log("[DEBUG] allMessages length:", allMessages.length);
+    console.log("[DEBUG] allMessages:", allMessages.map(m => ({ role: m.role, id: m.id?.substring(0, 8), parentId: m.parentId?.substring(0, 8) })));
+    if (!effectiveParentId && allMessages.length > 0) {
+      // 找到最新的消息（按 createdAt 排序）
+      const sortedMessages = [...allMessages].sort((a, b) => {
+        if (!a.createdAt || !b.createdAt) return 0;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+      effectiveParentId = sortedMessages[0]?.id || null;
+      console.log("[DEBUG] Using fallback parentId:", effectiveParentId);
+    }
+
     // 创建用户消息
     const userMessageId = crypto.randomUUID();
     const userMessage: Message = {
       id: userMessageId,
       role: 'user',
       content: inputValue,
-      parentId: currentLeafId,
+      parentId: effectiveParentId,
       requestParams: {
         aspectRatio: actualAspectRatio,
         count: options.count,
@@ -231,6 +260,8 @@ export function ImageGenerationView() {
             count: options.count,
             aspectRatio: actualAspectRatio,
             referenceImages: options.referenceImages,
+            // 父消息ID（用于建立消息树关系）
+            parentId: effectiveParentId,
             // 包含高级参数
             size: options.size,
             negative_prompt: options.negative_prompt,
@@ -309,16 +340,15 @@ export function ImageGenerationView() {
           status: 'completed',
         }));
 
-        // 更新URL
+        // 更新URL和会话ID
         if (data.sessionId && data.sessionId !== currentSessionId) {
           setCurrentSessionId(data.sessionId);
           router.push(`/chat/images?id=${data.sessionId}`);
           // 新对话创建后立即刷新侧边栏
           window.dispatchEvent(new CustomEvent('refresh-sessions'));
-        }
-
-        // 重新加载历史以同步数据库状态
-        if (data.sessionId) {
+          // 注意：setCurrentSessionId 会触发 useEffect 调用 loadHistory，所以这里不需要再调用
+        } else if (data.sessionId) {
+          // 如果是同一会话，手动刷新历史
           loadHistory(data.sessionId).catch(err => {
             console.error("加载历史失败:", err);
           });
@@ -370,6 +400,7 @@ export function ImageGenerationView() {
           count: options.count,
           aspectRatio,
           referenceImages: options.referenceImages,
+          parentId: effectiveParentId,
           negative_prompt: options.negative_prompt,
           prompt_extend: options.prompt_extend,
           watermark: options.watermark,
@@ -668,6 +699,7 @@ export function ImageGenerationView() {
           sessionId: currentSessionId,
           provider: selectedProvider || messageToRegenerate.provider,
           model: selectedModel || messageToRegenerate.model,
+          regenerate: true, // 标记为重新生成模式
         }),
         signal: controller.signal,
       });
@@ -714,15 +746,9 @@ export function ImageGenerationView() {
         content: imageContent,
         status: 'completed',
       }));
-
-      // 重新加载历史以同步数据库状态
-      if (data.sessionId && currentSessionId) {
-        loadHistory(currentSessionId).catch(err => {
-          console.error("加载历史失败:", err);
-        });
-      }
       
-      // 刷新侧边栏
+      // 重新生成模式下不创建新消息，不需要刷新侧边栏
+      // 只刷新会话列表以更新预览
       window.dispatchEvent(new CustomEvent('refresh-sessions'));
     } catch (error: any) {
       if (error.name === 'AbortError') {
@@ -841,7 +867,7 @@ export function ImageGenerationView() {
                 input={inputValue}
                 handleInputChange={handleInputChange}
                 handleSubmit={handleSubmit}
-                isLoading={isLoading}
+                isLoading={isLoading || isLoadingHistory}
                 onStop={handleStop}
                 selectedModel={selectedModel}
                 voiceInputMode={voiceInputConfig.mode}

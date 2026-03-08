@@ -69,13 +69,11 @@ function DynamicSizeImage({ url, alt, fallbackAspectRatio, onClick, onDownload }
     console.error('Failed to load image:', url);
   }, [url]);
 
-  // 计算容器尺寸：固定高度，宽度根据实际图片比例或回退比例
+  // 计算容器尺寸：固定高度，宽度根据回退比例（保持与 skeleton 一致）
   // 手机端使用一半高度
   const currentHeight = isMobile ? MOBILE_FIXED_HEIGHT : FIXED_HEIGHT;
-  const aspectRatio = actualSize 
-    ? actualSize.width / actualSize.height 
-    : fallbackAspectRatio;
-  const containerWidth = currentHeight * aspectRatio;
+  // 始终使用 fallbackAspectRatio，确保所有图片尺寸一致
+  const containerWidth = currentHeight * fallbackAspectRatio;
 
   return (
     <div

@@ -299,41 +299,7 @@ export const MessageRow = memo(({
 
                   {/* 渲染图像消息或 Markdown 内容 */}
                   {message.content && (
-                    isPendingImageMessage ? (
-                      // 显示Skeleton占位
-                      (() => {
-                        try {
-                          const parsed = JSON.parse(message.content);
-                          const count = parsed.count || 1;
-                          const aspectRatio = parsed.aspectRatio || '1:1';
-                          // 支持两种格式: "16:9" 或 "1024×1024"
-                          const separator = aspectRatio.includes('×') ? '×' : ':';
-                          const [width, height] = aspectRatio.split(separator).map(Number);
-                          const aspectRatioValue = width / height || 1;
-
-                          // 固定高度 400px，宽度根据宽高比计算
-                          const fixedHeight = 400;
-                          const calculatedWidth = fixedHeight * aspectRatioValue;
-
-                          return (
-                            <div className="flex gap-4">
-                              {Array.from({ length: count }).map((_, index) => (
-                                <Skeleton
-                                  key={index}
-                                  className="shrink-0 rounded-lg"
-                                  style={{
-                                    height: `${fixedHeight}px`,
-                                    width: `${calculatedWidth}px`,
-                                  }}
-                                />
-                              ))}
-                            </div>
-                          );
-                        } catch {
-                          return <Skeleton className="h-64 w-64 rounded-lg" />;
-                        }
-                      })()
-                    ) : isInterleavedMessage ? (
+                    isInterleavedMessage ? (
                       (() => {
                         try {
                           const parsed = JSON.parse(message.content);

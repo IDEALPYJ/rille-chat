@@ -17,6 +17,8 @@ export interface ImageGenerationRequest {
   count?: number;
   /** 尺寸 (如 "1024x1024") */
   size?: string;
+  /** 宽高比 (如 "1:1") */
+  aspectRatio?: string;
   /** 质量 */
   quality?: 'low' | 'medium' | 'high' | 'auto' | 'standard' | 'hd';
   /** 背景透明 */

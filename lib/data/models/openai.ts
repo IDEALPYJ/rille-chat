@@ -5,6 +5,294 @@ import { ModelConfig } from '@/lib/types/model';
 
 export const openaiModelConfigs: ModelConfig[] = [
     {
+        id: "gpt-5.4",
+        displayName: "GPT-5.4",
+        avatar: "gpt",
+        releasedAt: "2026-03-05",
+        knowledgeCutoff: "2025-08-31",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 1050000,
+        maxOutput: 128000,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 2.50, condition: { input: [0, 272000] } },
+                        { rate: 5.00, condition: { input: [272000, 'infinity'] } }
+                    ]
+                },
+                { type: "text", name: "cacheRead", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 0.25, condition: { input: [0, 272000] } },
+                        { rate: 0.50, condition: { input: [272000, 'infinity'] } }
+                    ]
+                },
+                { type: "text", name: "output", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 15.00, condition: { input: [0, 272000] } },
+                        { rate: 22.50, condition: { input: [272000, 'infinity'] } }
+                    ]
+                },
+                { type: "tools", name: "web_search", tiers: [{ rate: 10.00 }], unit: "1K_web_search" },
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "function_call", "structured_outputs"],
+        builtinTools: ["web_search", "image_generation", "code_interpreter"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["none", "low", "medium", "high", "xhigh"],
+                    default: "none"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium",
+                mapping: "text.verbosity"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0,
+                mapping: "temperature"
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0,
+                mapping: "top_p"
+            }
+        ]
+    },
+    {
+        id: "gpt-5.4-pro",
+        displayName: "GPT-5.4 pro",
+        avatar: "gpt",
+        releasedAt: "2026-03-05",
+        knowledgeCutoff: "2025-08-31",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 1050000,
+        maxOutput: 128000,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 30.00, condition: { input: [0, 272000] } },
+                        { rate: 60.00, condition: { input: [272000, 'infinity'] } }
+                    ]
+                },
+                { type: "text", name: "output", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 180.00, condition: { input: [0, 272000] } },
+                        { rate: 270.00, condition: { input: [272000, 'infinity'] } }
+                    ]
+                },
+                { type: "tools", name: "web_search", tiers: [{ rate: 10.00 }], unit: "1K_web_search" },
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "function_call", "structured_outputs"],
+        builtinTools: ["web_search", "image_generation"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["medium", "high", "xhigh"],
+                    default: "medium"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium",
+                mapping: "text.verbosity"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0,
+                mapping: "temperature"
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0,
+                mapping: "top_p"
+            }
+        ]
+    },
+    {
+        id: "gpt-5.3-chat-latest",
+        displayName: "GPT-5.3 Chat",
+        avatar: "gpt",
+        releasedAt: "2026-03-03",
+        knowledgeCutoff: "2025-08-31",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 128000,
+        maxOutput: 16384,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", tiers: [{ rate: 1.75 }], unit: "1M_tokens" },
+                { type: "text", name: "cacheRead", tiers: [{ rate: 0.175 }], unit: "1M_tokens" },
+                { type: "text", name: "output", tiers: [{ rate: 14.00 }], unit: "1M_tokens" },
+                { type: "tools", name: "web_search", tiers: [{ rate: 10.00 }], unit: "1K_web_search" },
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "function_call", "structured_outputs"],
+        builtinTools: ["web_search", "image_generation", "code_interpreter"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["none", "low", "medium", "high", "xhigh"],
+                    default: "none"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium",
+                mapping: "text.verbosity"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0,
+                mapping: "temperature"
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0,
+                mapping: "top_p"
+            }
+        ]
+    },
+    {
+        id: "gpt-5.3-codex",
+        displayName: "GPT-5.3 Codex",
+        avatar: "gpt",
+        releasedAt: "2026-02-05",
+        knowledgeCutoff: "2025-08-31",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 400000,
+        maxOutput: 128000,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", tiers: [{ rate: 1.75 }], unit: "1M_tokens" },
+                { type: "text", name: "cacheRead", tiers: [{ rate: 0.175 }], unit: "1M_tokens" },
+                { type: "text", name: "output", tiers: [{ rate: 14.00 }], unit: "1M_tokens" },
+                { type: "tools", name: "web_search", tiers: [{ rate: 10.00 }], unit: "1K_web_search" },
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "function_call", "structured_outputs"],
+        builtinTools: ["web_search", "image_generation", "code_interpreter"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["low", "medium", "high", "xhigh"],
+                    default: "low"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium",
+                mapping: "text.verbosity"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0,
+                mapping: "temperature"
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0,
+                mapping: "top_p"
+            }
+        ]
+    },
+    {
         id: "gpt-5.2",
         displayName: "GPT-5.2",
         avatar: "gpt",
@@ -172,6 +460,72 @@ export const openaiModelConfigs: ModelConfig[] = [
                 options: ["low", "medium", "high"],
                 default: "medium",
                 mapping: "text.verbosity"
+            }
+        ]
+    },
+    {
+        id: "gpt-5.2-codex",
+        displayName: "GPT-5.2 Codex",
+        avatar: "gpt",
+        releasedAt: "2025-12-18",
+        knowledgeCutoff: "2025-08-31",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 400000,
+        maxOutput: 128000,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", tiers: [{ rate: 1.75 }], unit: "1M_tokens" },
+                { type: "text", name: "cacheRead", tiers: [{ rate: 0.175 }], unit: "1M_tokens" },
+                { type: "text", name: "output", tiers: [{ rate: 14.00 }], unit: "1M_tokens" },
+                { type: "tools", name: "web_search", tiers: [{ rate: 10.00 }], unit: "1K_web_search" },
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "function_call", "structured_outputs"],
+        builtinTools: ["web_search", "image_generation", "code_interpreter"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["low", "medium", "high", "xhigh"],
+                    default: "medium"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium",
+                mapping: "text.verbosity"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0,
+                mapping: "temperature"
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0,
+                mapping: "top_p"
             }
         ]
     },

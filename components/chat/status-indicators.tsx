@@ -68,8 +68,8 @@ export function StatusIndicators({
           { bottom: "0px", left: "-20px" },
         ],
         2: [
-          { bottom: "0px", left: "-20px" },
           { bottom: "26px", left: "-28px" },
+          { bottom: "0px", left: "-20px" },
         ],
         3: [
           { bottom: "42px", left: "-28px" },

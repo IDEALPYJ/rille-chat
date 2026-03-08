@@ -26,6 +26,10 @@ const imageGenerationSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
   updateMessageId: z.string().optional().nullable(),
+  // 重新生成模式：为 true 时不创建新消息，只返回图片数据
+  regenerate: z.boolean().optional().default(false),
+  // 父消息ID（用于建立消息树关系）
+  parentId: z.string().optional().nullable(),
   // 尺寸参数
   size: z.string().optional(),
   // 通用高级参数
@@ -136,6 +140,8 @@ export async function POST(req: Request) {
       provider: overrideProvider,
       model: overrideModel,
       updateMessageId,
+      regenerate,
+      parentId,
       // 尺寸参数
       size,
       // 其他参数
@@ -248,6 +254,7 @@ export async function POST(req: Request) {
         role: 'user',
         content: prompt,
         status: 'completed',
+        parentId: parentId || undefined, // 设置父消息ID
       },
     });
 
@@ -360,6 +367,17 @@ export async function POST(req: Request) {
       prompt: prompt,
     };
 
+    // 重新生成模式：不创建新消息，只返回图片数据
+    if (regenerate) {
+      return NextResponse.json({
+        success: true,
+        sessionId: currentSessionId,
+        images: localImageUrls,
+        content: imageGenerationContent,
+        regenerate: true,
+      });
+    }
+
     // 创建 contentParts 用于结构化显示
     // 注意：不添加用户提示词到 contentParts，因为用户消息已经包含了提示词
     // 只在有额外文本输出（如图文混排）时才添加文本内容
@@ -395,26 +413,6 @@ export async function POST(req: Request) {
         },
       },
     });
-
-    // 10. 如果有 updateMessageId，尝试更新原消息状态
-    // 注意：如果消息不存在（可能是前端临时消息），则忽略错误
-    if (updateMessageId) {
-      try {
-        await db.message.update({
-          where: { id: updateMessageId },
-          data: {
-            status: 'completed',
-          },
-        });
-      } catch (error: any) {
-        // 如果消息不存在，记录日志但不抛出错误
-        if (error.code === 'P2025') {
-          logger.debug('Message to update not found, skipping update', { updateMessageId });
-        } else {
-          throw error;
-        }
-      }
-    }
 
     return NextResponse.json({
       success: true,

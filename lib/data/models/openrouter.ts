@@ -5,6 +5,282 @@ import { ModelConfig } from '@/lib/types/model';
 
 export const openrouterModelConfigs: ModelConfig[] = [
     {
+        id: "openai/gpt-5.4",
+        displayName: "GPT-5.4",
+        avatar: "gpt",
+        releasedAt: "2026-03-05",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 1050000,
+        maxOutput: 128000,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 2.50, condition: { input: [0, 272000] } },
+                        { rate: 5.00, condition: { input: [272000, 'infinity'] } }
+                    ]
+                },
+                { type: "text", name: "cacheRead", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 0.25, condition: { input: [0, 272000] } },
+                        { rate: 0.50, condition: { input: [272000, 'infinity'] } }
+                    ]
+                },
+                { type: "text", name: "output", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 15.00, condition: { input: [0, 272000] } },
+                        { rate: 22.50, condition: { input: [272000, 'infinity'] } }
+                    ]
+                },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 10.00, condition: "openai"}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "structured_outputs", "function_calling"],
+        builtinTools: ["web_search"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["none", "low", "medium", "high", "xhigh"],
+                    default: "none"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "engine",
+                type: "select",
+                options: ["native", "exa"],
+                default: "native"
+            },
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0
+            }
+        ],
+    },
+    {
+        id: "openai/gpt-5.4-pro",
+        displayName: "GPT-5.4 Pro",
+        avatar: "gpt",
+        releasedAt: "2026-03-05",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 1050000,
+        maxOutput: 128000,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 30.00, condition: { input: [0, 272000] } },
+                        { rate: 60.00, condition: { input: [272000, 'infinity'] } }
+                    ]
+                },
+                { type: "text", name: "output", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 180.00, condition: { input: [0, 272000] } },
+                        { rate: 270.00, condition: { input: [272000, 'infinity'] } }
+                    ]
+                },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 10.00, condition: "openai"}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "structured_outputs", "function_calling"],
+        builtinTools: ["web_search"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["medium", "high", "xhigh"],
+                    default: "medium"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "engine",
+                type: "select",
+                options: ["native", "exa"],
+                default: "native"
+            },
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium"
+            }
+        ]
+    },
+    {
+        id: "openai/gpt-5.3-chat",
+        displayName: "GPT-5.3 Chat",
+        avatar: "gpt",
+        releasedAt: "2026-03-03",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 128000,
+        maxOutput: 16384,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", unit: "1M_tokens", tiers: [{rate: 1.75}] },
+                { type: "text", name: "output", unit: "1M_tokens", tiers: [{rate: 14.00}] },
+                { type: "text", name: "cacheRead", unit: "1M_tokens", tiers: [{rate: 0.175}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 10.00, condition: "openai"}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["structured_outputs", "function_calling"],
+        builtinTools: ["web_search"],
+
+        parameters: [
+            {
+                id: "engine",
+                type: "select",
+                options: ["native", "exa"],
+                default: "native"
+            },
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0,
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0,
+            }
+        ],
+    },
+    {
+        id: "openai/gpt-5.3-codex",
+        displayName: "GPT-5.3 Codex",
+        avatar: "gpt",
+        releasedAt: "2026-02-05",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 400000,
+        maxOutput: 128000,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", unit: "1M_tokens", tiers: [{rate: 1.75}] },
+                { type: "text", name: "output", unit: "1M_tokens", tiers: [{rate: 14.00}] },
+                { type: "text", name: "cacheRead", unit: "1M_tokens", tiers: [{rate: 0.175}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 10.00, condition: "openai"}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "structured_outputs", "function_calling"],
+        builtinTools: ["web_search"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["low", "medium", "high", "xhigh"],
+                    default: "medium"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "engine",
+                type: "select",
+                options: ["native", "exa"],
+                default: "native"
+            },
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0
+            }
+        ],
+    },
+    {
         id: "openai/gpt-5.2",
         displayName: "GPT-5.2",
         avatar: "gpt",
@@ -185,6 +461,75 @@ export const openrouterModelConfigs: ModelConfig[] = [
                 default: "medium"
             }
         ]
+    },
+    {
+        id: "openai/gpt-5.2-codex",
+        displayName: "GPT-5.2 Codex",
+        avatar: "gpt",
+        releasedAt: "2025-12-18",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 400000,
+        maxOutput: 128000,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", unit: "1M_tokens", tiers: [{rate: 1.75}] },
+                { type: "text", name: "output", unit: "1M_tokens", tiers: [{rate: 14.00}] },
+                { type: "text", name: "cacheRead", unit: "1M_tokens", tiers: [{rate: 0.175}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 10.00, condition: "openai"}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "structured_outputs", "function_calling"],
+        builtinTools: ["web_search"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["low", "medium", "high", "xhigh"],
+                    default: "medium"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "engine",
+                type: "select",
+                options: ["native", "exa"],
+                default: "native"
+            },
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0
+            }
+        ],
     },
     {
         id: "openai/gpt-5.1",
@@ -2127,6 +2472,64 @@ export const openrouterModelConfigs: ModelConfig[] = [
             }]
     },
     {
+        id: "google/gemini-3.1-pro-preview",
+        displayName: "Gemini 3.1 Pro Preview",
+        avatar: "gemini",
+        releasedAt: "2026-02-19",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 1048576,
+        maxOutput: 65536,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", unit: "1M_tokens", tiers: [{ rate: 2.00, condition: { input: [0, 204800] } }, { rate: 4.00, condition: { input: [204800, "infinity"] } }] },
+                { type: "text", name: "cacheRead", unit: "1M_tokens", tiers: [{ rate: 0.20, condition: { input: [0, 204800] } }, { rate: 0.40, condition: { input: [204800, "infinity"] } }] },
+                { type: "text", name: "output", unit: "1M_tokens", tiers: [{ rate: 12.00, condition: { input: [0, 204800] } }, { rate: 18.00, condition: { input: [204800, "infinity"] } }] },
+                { type: "text", name: "cacheWrite", unit: "1M_tokens", tiers: [{rate: 0.375}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 14.00, condition: "google"}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image", "video", "audio"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "structured_outputs", "function_calling"],
+        builtinTools: ["web_search"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["low", "medium", "high"],
+                    default: "high"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0
+            }
+        ]
+    },
+    {
         id: "google/gemini-3-pro-preview",
         displayName: "Gemini 3 Pro Preview",
         avatar: "gemini",
@@ -2140,9 +2543,9 @@ export const openrouterModelConfigs: ModelConfig[] = [
         pricing: {
             currency: "USD",
             items: [
-                { type: "text", name: "input", unit: "1M_tokens", tiers: [{rate: 2.00}] },
-                { type: "text", name: "output", unit: "1M_tokens", tiers: [{rate: 12.00}] },
-                { type: "text", name: "cacheRead", unit: "1M_tokens", tiers: [{rate: 0.20}] },
+                { type: "text", name: "input", unit: "1M_tokens", tiers: [{ rate: 2.00, condition: { input: [0, 204800] } }, { rate: 4.00, condition: { input: [204800, "infinity"] } }] },
+                { type: "text", name: "cacheRead", unit: "1M_tokens", tiers: [{ rate: 0.20, condition: { input: [0, 204800] } }, { rate: 0.40, condition: { input: [204800, "infinity"] } }] },
+                { type: "text", name: "output", unit: "1M_tokens", tiers: [{ rate: 12.00, condition: { input: [0, 204800] } }, { rate: 18.00, condition: { input: [204800, "infinity"] } }] },
                 { type: "text", name: "cacheWrite", unit: "1M_tokens", tiers: [{rate: 0.375}] },
                 { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 14.00, condition: "google"}] },
                 { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
@@ -4182,6 +4585,63 @@ export const openrouterModelConfigs: ModelConfig[] = [
                 type: "select",
                 options: ["low", "medium", "high"],
                 default: "medium"
+            }
+        ]
+    },
+    {
+        id: "google/gemini-3.1-flash-image-preview",
+        displayName: "Nano Banana 2",
+        avatar: "gemini",
+        releasedAt: "2026-02-26",
+        modelType: "image",
+        apiType: "openai:chat-completions",
+
+        contextWindow: 131072,
+        maxOutput: 32768,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", unit: "1M_tokens", tiers: [{ rate: 0.50 }] },
+                { type: "text", name: "output", unit: "1M_tokens", tiers: [{ rate: 3.00 }] },
+                { type: "image", name: "input", unit: "1M_tokens", tiers: [{ rate: 0.50 }] },
+                { type: "image", name: "output", unit: "1M_tokens", tiers: [{ rate: 60.00 }] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 35.00, condition: "google"}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text", "image"],
+        },
+
+        features: ["reasoning", "structured_outputs"],
+        builtinTools: ["web_search"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true
+        },
+
+        parameters: [
+            {
+                id: "engine",
+                type: "select",
+                options: ["native", "exa"],
+                default: "native"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0
             }
         ]
     },
