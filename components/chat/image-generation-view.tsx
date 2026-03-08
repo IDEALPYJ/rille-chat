@@ -246,7 +246,8 @@ export function ImageGenerationView() {
           actualAspectRatio,
           userMessageId,
           assistantMessageId,
-          controller
+          controller,
+          effectiveParentId
         );
       } else {
         // 非流式模式：使用普通 fetch
@@ -386,7 +387,8 @@ export function ImageGenerationView() {
     aspectRatio: string,
     userMessageId: string,
     assistantMessageId: string,
-    controller: AbortController
+    controller: AbortController,
+    effectiveParentId: string | null
   ): Promise<void> => {
     return new Promise((resolve, reject) => {
       // 使用 fetch 模拟 SSE
