@@ -483,6 +483,10 @@ export function ChatInput({
             onStopRecording={stopRecording}
             onStartRecording={startRecording}
             onStop={onStop || (() => { })}
+            onSubmit={() => {
+              const form = textareaRef.current?.closest("form");
+              form?.requestSubmit();
+            }}
           />
         </form>
       </div>
