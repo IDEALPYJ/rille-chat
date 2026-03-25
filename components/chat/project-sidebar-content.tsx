@@ -30,7 +30,6 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -629,7 +628,7 @@ export function ProjectSidebarContent({ projectId, onLinkClick }: ProjectSidebar
 
         <div className="flex-1 overflow-hidden pt-1">
           {activeTab === "chat" ? (
-            <ScrollArea className="h-full">
+            <div className="h-full overflow-y-auto no-scrollbar">
               <div className="flex flex-col gap-[2px]">
                 <button
                   className="h-7 w-full flex items-center justify-start gap-x-1.5 font-normal px-2 rounded-md hover:bg-muted dark:hover:bg-muted/50 transition-colors duration-300 ease-in-out text-xs text-foreground"
@@ -766,7 +765,7 @@ export function ProjectSidebarContent({ projectId, onLinkClick }: ProjectSidebar
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           ) : (
             <div className="h-full relative flex flex-col"
               onDragOver={(e) => {
@@ -801,7 +800,7 @@ export function ProjectSidebarContent({ projectId, onLinkClick }: ProjectSidebar
                   </div>
                 </div>
               )}
-              <ScrollArea className="flex-1 min-h-0 w-full overflow-x-hidden">
+              <div className="flex-1 min-h-0 w-full overflow-x-hidden overflow-y-auto no-scrollbar">
                 <div className="flex flex-col gap-[2px] w-full max-w-full box-border">
                 <button
                   className="h-7 w-full flex items-center justify-start gap-x-1.5 font-normal px-2 rounded-md hover:bg-muted dark:hover:bg-muted/50 transition-colors duration-300 ease-in-out text-xs text-foreground"
@@ -909,7 +908,7 @@ export function ProjectSidebarContent({ projectId, onLinkClick }: ProjectSidebar
                   </div>
                 )}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           )}
         </div>
@@ -1066,7 +1065,7 @@ export function ProjectSidebarContent({ projectId, onLinkClick }: ProjectSidebar
               </div>
 
               {/* 记忆列表 */}
-              <ScrollArea className="max-h-[300px]">
+              <div className="max-h-[300px] overflow-y-auto no-scrollbar">
                 {isLoadingMemories ? (
                   <div className="flex flex-col items-center justify-center py-8 gap-2">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -1109,7 +1108,7 @@ export function ProjectSidebarContent({ projectId, onLinkClick }: ProjectSidebar
                       ))}
                   </div>
                 )}
-              </ScrollArea>
+              </div>
                 </div>
               )}
 

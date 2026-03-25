@@ -7,6 +7,7 @@ interface TokenUsageTooltipProps {
   outputTokens: number;
   inputCacheTokens?: number;
   outputCacheTokens?: number;
+  totalTokens?: number;
   children: React.ReactNode;
 }
 
@@ -15,10 +16,13 @@ export function TokenUsageTooltip({
   outputTokens,
   inputCacheTokens = 0,
   outputCacheTokens = 0,
+  totalTokens: propTotalTokens,
   children
 }: TokenUsageTooltipProps) {
   const { t } = useI18n();
-  const totalTokens = inputTokens + outputTokens + inputCacheTokens + outputCacheTokens;
+  const calculatedTotalTokens = inputTokens + outputTokens + inputCacheTokens + outputCacheTokens;
+  // 优先使用传入的 totalTokens，如果没有则使用计算值
+  const totalTokens = propTotalTokens ?? calculatedTotalTokens;
   
   // 计算各部分占比
   const inputPercent = totalTokens > 0 ? (inputTokens / totalTokens) * 100 : 0;

@@ -100,8 +100,22 @@ export function selectProviderAndModel(
     return null;
   }
 
-  // 模型选择：优先使用 overrideModel，否则使用 provider 的默认模型
-  let selectedModel = overrideModel || getDefaultModelForProvider(selectedProviderId, selectedProviderConfig);
+  // 模型选择：优先使用 overrideModel，其次使用用户设置的默认模型，最后使用 provider 的默认模型
+  let selectedModel: string;
+  if (overrideModel) {
+    selectedModel = overrideModel;
+  } else if (settings.defaultChatModel) {
+    // 检查用户设置的默认模型是否属于当前选中的 provider
+    const [defaultProviderId] = settings.defaultChatModel.split(":");
+    if (defaultProviderId === selectedProviderId) {
+      selectedModel = settings.defaultChatModel.split(":")[1];
+    } else {
+      // 如果默认模型不属于当前 provider，使用 provider 的默认模型
+      selectedModel = getDefaultModelForProvider(selectedProviderId, selectedProviderConfig);
+    }
+  } else {
+    selectedModel = getDefaultModelForProvider(selectedProviderId, selectedProviderConfig);
+  }
 
   // Handle Deep Thinking toggle
   const reasoningEnabled = typeof reasoning === 'boolean' ? reasoning : reasoning?.enabled;

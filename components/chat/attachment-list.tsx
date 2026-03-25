@@ -21,9 +21,9 @@ export function AttachmentList({ attachments, onRemove }: AttachmentListProps) {
         {attachments.map((file) => (
           <div
             key={file.id}
-            className="flex items-center gap-3 bg-muted dark:bg-muted/30 border border-border dark:border-border/50 rounded-lg p-2 min-w-0 max-w-[calc(100vw-4rem)] sm:min-w-[220px] sm:max-w-[260px] shrink-0 relative group transition-all hover:bg-muted/80 dark:hover:bg-muted/50"
+            className="flex items-center gap-3 bg-muted dark:bg-muted/30 border border-border dark:border-border/50 rounded-md p-2 min-w-0 max-w-[calc(100vw-4rem)] sm:min-w-[220px] sm:max-w-[260px] shrink-0 relative group transition-all"
           >
-            <div className="p-2 bg-white dark:bg-cardrounded-lg border border-border dark:border-bordershadow-sm dark:shadow-none shrink-0">
+            <div className="p-2 bg-white dark:bg-card border border-border dark:border-border shrink-0 rounded-md">
               {getFileIcon(file.type)}
             </div>
             <div className="flex flex-col min-w-0 flex-1 pr-6">

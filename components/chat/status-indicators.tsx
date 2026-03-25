@@ -65,11 +65,11 @@ export function StatusIndicators({
     : {
         // 多行模式：弧形更舒展
         1: [
-          { bottom: "0px", left: "-20px" },
+          { bottom: "42px", left: "-28px" },
         ],
         2: [
-          { bottom: "26px", left: "-28px" },
-          { bottom: "0px", left: "-20px" },
+          { bottom: "42px", left: "-28px" },
+          { bottom: "20px", left: "-28px" },
         ],
         3: [
           { bottom: "42px", left: "-28px" },

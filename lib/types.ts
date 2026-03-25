@@ -351,6 +351,11 @@ export interface UserSettings {
     enabled: boolean;
     model: string;
   };
+  // 默认模型设置
+  defaultChatModel?: string;
+  defaultImageModel?: string;
+  defaultVectorModel?: string;
+  sendShortcut?: "enter" | "ctrl-enter";
 }
 
 /**

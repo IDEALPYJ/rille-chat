@@ -433,6 +433,7 @@ export const MessageRow = memo(({
                         outputTokens={message.output_tokens || 0}
                         inputCacheTokens={message.input_cache_tokens || 0}
                         outputCacheTokens={message.output_cache_tokens || 0}
+                        totalTokens={message.total_tokens}
                       >
                         <span className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono select-none cursor-help">
                           <Coins size={12} className="text-muted-foreground/70" />
