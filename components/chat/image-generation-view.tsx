@@ -644,15 +644,13 @@ export function ImageGenerationView() {
 
     // 从AI消息的content中解析选项信息和现有图片
     let aspectRatio = "1:1";
-    let count = 1;
-    let referenceImages: string[] = [];
     let existingImages: Array<{ url: string; status: string; error?: string }> = [];
+    let referenceImages: string[] = [];
 
     try {
       const parsed = JSON.parse(messageToRegenerate.content || "{}");
       if (parsed.type === 'image_generation') {
         aspectRatio = parsed.aspectRatio || "1:1";
-        count = parsed.count || 1;
         // 保留现有的图片（过滤掉之前的错误项）
         existingImages = (parsed.images || []).filter((img: any) => img.status === 'completed');
       }

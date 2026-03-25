@@ -139,7 +139,7 @@ export async function POST(req: Request) {
       sessionId,
       provider: overrideProvider,
       model: overrideModel,
-      updateMessageId,
+      updateMessageId: _updateMessageId,
       regenerate,
       parentId,
       // 尺寸参数

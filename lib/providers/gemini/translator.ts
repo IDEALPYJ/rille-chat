@@ -154,7 +154,28 @@ export class GeminiTranslator implements ParameterTranslator<TranslatorInput, an
             if (part.type === 'text' && part.text) {
               parts.push({ text: part.text });
             } else if (part.type === 'image_url' && part.image_url?.url) {
-              parts.push({ text: `[Image: ${part.image_url.url}]` });
+              // 处理图像数据
+              const imageUrl = part.image_url.url;
+              if (imageUrl.startsWith('data:')) {
+                // Base64 编码的图像数据
+                const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+                if (match) {
+                  const mimeType = match[1];
+                  const base64Data = match[2];
+                  parts.push({
+                    inlineData: {
+                      mimeType,
+                      data: base64Data,
+                    },
+                  });
+                } else {
+                  // 格式不正确，作为文本处理
+                  parts.push({ text: '[Image]' });
+                }
+              } else {
+                // 外部 URL，作为文本处理（Gemini 不支持直接引用外部图像 URL）
+                parts.push({ text: `[Image: ${imageUrl}]` });
+              }
             }
           }
         }

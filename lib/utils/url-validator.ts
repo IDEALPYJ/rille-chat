@@ -11,7 +11,6 @@ import { logger } from '@/lib/logger';
 function isInternalIP(hostname: string): boolean {
   // 检查是否是IP地址
   const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-  const ipv6Regex = /^[0-9a-fA-F:]+$/;
 
   if (ipv4Regex.test(hostname)) {
     const parts = hostname.split('.').map(Number);
@@ -70,7 +69,7 @@ export function validateURL(url: string, allowedHosts?: string[]): { valid: bool
     }
 
     return { valid: true };
-  } catch (error) {
+  } catch {
     return { valid: false, error: 'Invalid URL format' };
   }
 }

@@ -6,12 +6,106 @@
 import { Message } from '@/lib/types';
 import { UnifiedMessage } from './unified-types';
 import OpenAI from 'openai';
+import { readFile } from 'fs/promises';
+import { getFilePathFromUrl } from '@/lib/file-utils';
+import { logger } from '@/lib/logger';
+
+/**
+ * 文件处理配置
+ */
+export interface FileProcessingConfig {
+  // 是否在本地解析文件（提取文本）
+  // true: 在本地解析成文本后传递给模型
+  // false: 将文件作为 base64 直接传递给模型
+  parseLocally?: boolean;
+  // 最大文件大小（字节），超过此大小的文件将不会被转换为 base64
+  maxFileSizeForBase64?: number;
+}
+
+// 默认配置：PDF/Word/Excel/PPT 在本地解析，图像直接上传
+const defaultFileConfig: FileProcessingConfig = {
+  parseLocally: true,
+  maxFileSizeForBase64: 10 * 1024 * 1024, // 10MB
+};
+
+/**
+ * 将文件转换为 base64 data URL
+ */
+async function convertFileToBase64(
+  url: string, 
+  fileId?: string, 
+  mimeType?: string
+): Promise<string | null> {
+  try {
+    // 从 URL 获取文件路径
+    const filePath = await getFilePathFromUrl(url, fileId);
+    if (!filePath) {
+      logger.warn(`Cannot find file path for URL: ${url}`);
+      return null;
+    }
+
+    // 读取文件并转换为 base64
+    const buffer = await readFile(filePath);
+    const base64 = buffer.toString('base64');
+    
+    // 根据文件扩展名确定 MIME 类型
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    let detectedMimeType = mimeType || 'application/octet-stream';
+    
+    // 图像类型
+    if (ext === 'png') detectedMimeType = 'image/png';
+    else if (ext === 'jpg' || ext === 'jpeg') detectedMimeType = 'image/jpeg';
+    else if (ext === 'gif') detectedMimeType = 'image/gif';
+    else if (ext === 'webp') detectedMimeType = 'image/webp';
+    else if (ext === 'bmp') detectedMimeType = 'image/bmp';
+    // 文档类型
+    else if (ext === 'pdf') detectedMimeType = 'application/pdf';
+    else if (ext === 'doc') detectedMimeType = 'application/msword';
+    else if (ext === 'docx') detectedMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    else if (ext === 'xls') detectedMimeType = 'application/vnd.ms-excel';
+    else if (ext === 'xlsx') detectedMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    else if (ext === 'ppt') detectedMimeType = 'application/vnd.ms-powerpoint';
+    else if (ext === 'pptx') detectedMimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+    // 文本类型
+    else if (ext === 'txt') detectedMimeType = 'text/plain';
+    else if (ext === 'csv') detectedMimeType = 'text/csv';
+    else if (ext === 'json') detectedMimeType = 'application/json';
+    
+    return `data:${detectedMimeType};base64,${base64}`;
+  } catch (err) {
+    logger.error(`Failed to convert file to base64: ${url}`, err);
+    return null;
+  }
+}
+
+/**
+ * 判断文件类型是否应该以 base64 格式直接上传
+ * （而不是在本地解析成文本）
+ */
+function shouldUploadAsBase64(mimeType: string, fileName: string): boolean {
+  // 图像文件：直接上传 base64
+  if (mimeType.startsWith('image/')) return true;
+  
+  // 视频文件：直接上传（如果模型支持）
+  if (mimeType.startsWith('video/')) return true;
+  
+  // 音频文件：直接上传（如果模型支持）
+  if (mimeType.startsWith('audio/')) return true;
+  
+  // 其他文件类型默认在本地解析
+  return false;
+}
 
 /**
  * 将系统 Message 格式转换为 UnifiedMessage 格式
+ * @param messages 消息列表
+ * @param config 文件处理配置
  */
-export function convertToUnifiedMessages(messages: Message[]): UnifiedMessage[] {
-  return messages.map((msg) => {
+export async function convertToUnifiedMessages(
+  messages: Message[],
+  config: FileProcessingConfig = defaultFileConfig
+): Promise<UnifiedMessage[]> {
+  return Promise.all(messages.map(async (msg) => {
     const unified: UnifiedMessage = {
       role: msg.role === 'data' ? 'user' : msg.role, // 将 'data' 转换为 'user'
       content: msg.content,
@@ -19,24 +113,58 @@ export function convertToUnifiedMessages(messages: Message[]): UnifiedMessage[] 
 
     // 如果有 attachments，转换为 content 数组格式
     if (msg.attachments && msg.attachments.length > 0) {
-      const contentParts: Array<{ type: 'text' | 'image_url'; text?: string; image_url?: { url: string } }> = [
+      const contentParts: Array<{
+        type: 'text' | 'image_url' | 'video_url' | 'file_url';
+        text?: string;
+        image_url?: { url: string };
+        video_url?: { url: string };
+        file_url?: { url: string };
+      }> = [
         { type: 'text', text: msg.content },
       ];
 
       for (const attachment of msg.attachments) {
-        if (attachment.type.startsWith('image/')) {
-          contentParts.push({
-            type: 'image_url',
-            image_url: { url: attachment.url },
-          });
+        // 判断是否应该直接上传为 base64
+        const uploadAsBase64 = shouldUploadAsBase64(attachment.type, attachment.name);
+
+        if (uploadAsBase64) {
+          // 将文件转换为 base64 data URL
+          const base64Url = await convertFileToBase64(attachment.url, attachment.id, attachment.type);
+          if (base64Url) {
+            if (attachment.type.startsWith('image/')) {
+              contentParts.push({
+                type: 'image_url',
+                image_url: { url: base64Url },
+              });
+            } else if (attachment.type.startsWith('video/')) {
+              contentParts.push({
+                type: 'video_url',
+                video_url: { url: base64Url },
+              });
+            } else {
+              // 其他文件类型（PDF、Word等）也作为 file_url 上传
+              contentParts.push({
+                type: 'file_url',
+                file_url: { url: base64Url },
+              });
+            }
+          } else {
+            // 如果转换失败，保留原始 URL
+            contentParts.push({
+              type: 'file_url',
+              file_url: { url: attachment.url },
+            });
+          }
         }
+        // 如果不是直接上传 base64，则保留附件信息
+        // 文本提取在 file-helper.ts 中处理
       }
 
       unified.content = contentParts;
     }
 
     return unified;
-  });
+  }));
 }
 
 /**
@@ -137,6 +265,10 @@ export function convertUnifiedMessageToOpenAI(message: UnifiedMessage): OpenAI.C
         return { type: 'text' as const, text: part.text || '' };
       } else if (part.type === 'image_url') {
         return { type: 'image_url' as const, image_url: part.image_url || { url: '' } };
+      } else if (part.type === 'video_url') {
+        // 视频URL转换为image_url格式（部分模型支持）
+        // 注意：OpenAI API 目前不直接支持视频，这里保留video_url供特定适配器处理
+        return { type: 'image_url' as const, image_url: part.video_url || { url: '' } };
       }
       return { type: 'text' as const, text: JSON.stringify(part) };
     });

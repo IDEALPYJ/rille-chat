@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronUp, Brain } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { CodeBlock } from "@/components/ui/code-block";
 import remarkGfm from "remark-gfm";
 import { useI18n } from "@/lib/i18n/context";
 
@@ -48,24 +47,15 @@ export function ReasoningDisplay({ content }: ReasoningDisplayProps) {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                code({ node: _node, inline, className, children, ...props }: any) {
-                  const match = /language-(\w+)/.exec(className || '');
-                  const language = match ? match[1] : '';
-
-                  if (inline) {
-                    return (
-                      <code className="bg-muted px-1 py-0.5 rounded text-[10px] font-mono" {...props}>
-                        {children}
-                      </code>
-                    );
-                  }
-
+                code({ node: _node, children, ...props }: any) {
                   return (
-                    <CodeBlock
-                      language={language}
-                      value={String(children).replace(/\n$/, '')}
-                    />
+                    <code className="bg-muted px-1 py-0.5 rounded text-[10px] font-mono" {...props}>
+                      {children}
+                    </code>
                   );
+                },
+                pre({ children }: any) {
+                  return <>{children}</>;
                 }
               }}
             >

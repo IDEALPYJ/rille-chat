@@ -303,7 +303,7 @@ export async function executeAICall(options: AICallOptions): Promise<AICallResul
     throw new Error(`No protocol adapter found for provider: ${providerSelection.selectedProviderId}`);
   }
 
-  const unifiedMessages = convertToUnifiedMessages(messages);
+  const unifiedMessages = await convertToUnifiedMessages(messages);
   const commonSettings = convertToCommonSettings(advancedSettings);
 
   const protocol = getProtocolForProvider(providerSelection.selectedProviderId);

@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
           // 构建TranslatorInput
           const translatorInput: TranslatorInput = {
             modelConfig,
-            messages: convertToUnifiedMessages(context.messages),
+            messages: await convertToUnifiedMessages(context.messages),
             userSettings: commonSettings,
             reasoning: typeof reasoning === 'boolean'
               ? { enabled: reasoning }
@@ -243,7 +243,7 @@ export async function POST(req: NextRequest) {
             const { createMcpRecursiveStreamFromUnified } = await import("@/lib/chat/ai-call-manager-unified");
             
             const baseCallArgs = {
-              messages: convertToUnifiedMessages(context.messages),
+              messages: await convertToUnifiedMessages(context.messages),
               model: providerSelection.selectedModel,
               settings: convertToCommonSettings(advancedSettings),
               providerConfig: providerConfig,

@@ -236,9 +236,11 @@ export class XAIResponsesTranslator extends OpenAIResponsesTranslator {
               const contentItem = item as Record<string, any>;
               // xAI 支持图片输入
               if (contentItem.type === 'image_url' || contentItem.image_url) {
+                // image_url 可能是对象 { url: string } 或字符串
+                const imageUrl = contentItem.image_url?.url || contentItem.image_url || contentItem.imageUrl;
                 return {
                   type: 'input_image' as const,
-                  image_url: contentItem.image_url || contentItem.imageUrl,
+                  image_url: imageUrl,
                   detail: contentItem.detail || 'auto'
                 };
               }

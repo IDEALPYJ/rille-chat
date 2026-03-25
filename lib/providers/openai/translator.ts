@@ -93,9 +93,11 @@ export class OpenAIResponsesTranslator implements ParameterTranslator<Translator
             if (item && typeof item === 'object') {
               const contentItem = item as Record<string, any>;
               if (contentItem.type === 'image_url' || contentItem.image_url) {
+                // Responses API 的 input_image 需要 image_url 字符串（URL 或 base64）
+                const imageUrl = contentItem.image_url?.url || contentItem.image_url || contentItem.imageUrl;
                 return {
                   type: 'input_image' as const,
-                  image_url: contentItem.image_url || contentItem.imageUrl,
+                  image_url: imageUrl,
                   detail: contentItem.detail
                 };
               }

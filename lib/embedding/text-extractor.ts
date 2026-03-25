@@ -94,24 +94,46 @@ export async function extractTextFromFile(
     // PDF文件
     if (ext === '.pdf' || mimeType === 'application/pdf') {
       try {
-        // 动态导入pdf-parse（可选依赖）
-        const pdfParse = await import('pdf-parse').catch(() => null);
-        if (!pdfParse) {
+        // 动态导入pdfreader（纯JavaScript实现，不依赖PDF.js worker）
+        const pdfreader = await import('pdfreader').catch(() => null);
+        if (!pdfreader) {
           return { 
             text: '', 
             success: false, 
-            error: 'PDF解析功能需要安装pdf-parse包: pnpm add pdf-parse' 
+            error: 'PDF解析功能需要安装pdfreader包: pnpm add pdfreader' 
           };
         }
-        const buffer = await readFile(filePath);
-        // pdf-parse 的类型定义中 default 可能存在，使用类型断言处理
-        const pdfParseModule = pdfParse as unknown as { default?: (buffer: Buffer) => Promise<{ text: string }> } & ((buffer: Buffer) => Promise<{ text: string }>);
-        const pdfParseFn = pdfParseModule.default || pdfParseModule;
-        if (typeof pdfParseFn !== 'function') {
-          return { text: '', success: false, error: 'PDF parser function not available' };
+        
+        const { PdfReader } = pdfreader;
+        
+        // 使用Promise包装回调式API
+        const text = await new Promise<string>((resolve, reject) => {
+          let extractedText = '';
+          new PdfReader().parseFileItems(filePath, (err, item) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+            if (!item) {
+              // 解析完成
+              resolve(extractedText);
+              return;
+            }
+            if (item.text) {
+              extractedText += item.text + '\n';
+            }
+          });
+        });
+        
+        if (!text.trim()) {
+          return { 
+            text: '', 
+            success: false, 
+            error: 'PDF文件为空或无法提取文本内容' 
+          };
         }
-        const data = await pdfParseFn(buffer);
-        return { text: cleanText(data.text), success: true };
+        
+        return { text: cleanText(text), success: true };
       } catch (err: any) {
         return { 
           text: '', 
@@ -121,36 +143,165 @@ export async function extractTextFromFile(
       }
     }
     
-    // DOCX文件
-    if (ext === '.docx' || mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    // DOCX/DOC 文件 (Word)
+    if (ext === '.docx' || ext === '.doc' || 
+        mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        mimeType === 'application/msword') {
       try {
-        // 动态导入mammoth（可选依赖）
-        const mammoth = await import('mammoth').catch(() => null);
-        if (!mammoth) {
+        // 动态导入word-extractor（支持DOC和DOCX）
+        const WordExtractor = await import('word-extractor').catch(() => null);
+        if (!WordExtractor) {
           return { 
             text: '', 
             success: false, 
-            error: 'DOCX解析功能需要安装mammoth包: pnpm add mammoth' 
+            error: 'Word解析功能需要安装word-extractor包: pnpm add word-extractor' 
           };
         }
-        const buffer = await readFile(filePath);
-        const result = await mammoth.extractRawText({ buffer });
-        return { text: cleanText(result.value), success: true };
+        
+        const extractor = new WordExtractor.default();
+        const doc = await extractor.extract(filePath);
+        const text = doc.getBody();
+        
+        if (!text.trim()) {
+          return { 
+            text: '', 
+            success: false, 
+            error: 'Word文件为空或无法提取文本内容' 
+          };
+        }
+        
+        return { text: cleanText(text), success: true };
       } catch (err: any) {
         return { 
           text: '', 
           success: false, 
-          error: `DOCX解析失败: ${err.message}` 
+          error: `Word文档解析失败: ${err.message}` 
         };
       }
     }
     
-    // DOC文件（旧格式，需要转换）
-    if (ext === '.doc' || mimeType === 'application/msword') {
+    // XLSX/XLS 文件 (Excel)
+    if (ext === '.xlsx' || ext === '.xls' || 
+        mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        mimeType === 'application/vnd.ms-excel') {
+      try {
+        // 动态导入xlsx（可选依赖）
+        const xlsx = await import('xlsx').catch(() => null);
+        if (!xlsx) {
+          return { 
+            text: '', 
+            success: false, 
+            error: 'Excel解析功能需要安装xlsx包: pnpm add xlsx' 
+          };
+        }
+        const buffer = await readFile(filePath);
+        const workbook = xlsx.read(buffer, { type: 'buffer' });
+        
+        let text = '';
+        workbook.SheetNames.forEach((sheetName: string) => {
+          const sheet = workbook.Sheets[sheetName];
+          // 将工作表转换为CSV格式
+          const csv = xlsx.utils.sheet_to_csv(sheet);
+          if (csv.trim()) {
+            text += `[工作表: ${sheetName}]\n${csv}\n\n`;
+          }
+        });
+        
+        if (!text.trim()) {
+          return { 
+            text: '', 
+            success: false, 
+            error: 'Excel文件为空或无法读取内容' 
+          };
+        }
+        
+        return { text: cleanText(text), success: true };
+      } catch (err: any) {
+        return { 
+          text: '', 
+          success: false, 
+          error: `Excel解析失败: ${err.message}` 
+        };
+      }
+    }
+    
+    // PPTX 文件 (PowerPoint)
+    if (ext === '.pptx' || 
+        mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+      try {
+        // 使用JSZip解析PPTX（PPTX实际上是ZIP文件）
+        const JSZip = await import('jszip').catch(() => null);
+        if (!JSZip) {
+          return { 
+            text: '', 
+            success: false, 
+            error: 'PPTX解析功能需要安装jszip包: pnpm add jszip' 
+          };
+        }
+        
+        const buffer = await readFile(filePath);
+        const zip = await JSZip.default.loadAsync(buffer);
+        
+        let text = '';
+        const slideRegex = /^ppt\/slides\/slide(\d+)\.xml$/;
+        const slides: { num: number; content: string }[] = [];
+        
+        // 遍历所有文件，找到幻灯片
+        for (const [filename, file] of Object.entries(zip.files)) {
+          const match = filename.match(slideRegex);
+          if (match && !file.dir) {
+            const slideNum = parseInt(match[1], 10);
+            const xmlContent = await file.async('text');
+            
+            // 从XML中提取文本内容
+            // 匹配 <a:t>标签中的文本
+            const textMatches = xmlContent.match(/<a:t>([^<]*)<\/a:t>/g);
+            let slideText = '';
+            if (textMatches) {
+              slideText = textMatches
+                .map((tag: string) => tag.replace(/<\/?a:t>/g, ''))
+                .filter((t: string) => t.trim())
+                .join('\n');
+            }
+            
+            if (slideText.trim()) {
+              slides.push({ num: slideNum, content: slideText });
+            }
+          }
+        }
+        
+        // 按幻灯片编号排序
+        slides.sort((a, b) => a.num - b.num);
+        
+        // 组合所有幻灯片内容
+        slides.forEach((slide) => {
+          text += `[幻灯片 ${slide.num}]\n${slide.content}\n\n`;
+        });
+        
+        if (!text.trim()) {
+          return { 
+            text: '', 
+            success: false, 
+            error: 'PPTX文件为空或无法读取内容' 
+          };
+        }
+        
+        return { text: cleanText(text), success: true };
+      } catch (err: any) {
+        return { 
+          text: '', 
+          success: false, 
+          error: `PPTX解析失败: ${err.message}` 
+        };
+      }
+    }
+    
+    // PPT文件（旧格式，需要转换）
+    if (ext === '.ppt' || mimeType === 'application/vnd.ms-powerpoint') {
       return { 
         text: '', 
         success: false, 
-        error: '不支持旧版DOC格式，请转换为DOCX格式' 
+        error: '不支持旧版PPT格式，请转换为PPTX格式' 
       };
     }
     

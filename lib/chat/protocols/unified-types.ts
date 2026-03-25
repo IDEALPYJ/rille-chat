@@ -24,11 +24,22 @@ export type UnifiedStreamEvent =
   | { type: 'error'; message: string; raw?: unknown };
 
 /**
+ * 内容部分类型
+ */
+export interface ContentPart {
+  type: 'text' | 'image_url' | 'video_url' | 'file_url';
+  text?: string;
+  image_url?: { url: string };
+  video_url?: { url: string };
+  file_url?: { url: string };
+}
+
+/**
  * 统一消息格式（与 OpenAI 接近）
  */
 export interface UnifiedMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | Array<{ type: 'text' | 'image_url'; text?: string; image_url?: { url: string } }>;
+  content: string | ContentPart[];
   name?: string;
   reasoning_content?: string;
   tool_calls?: Array<{

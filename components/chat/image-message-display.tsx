@@ -32,7 +32,7 @@ interface DynamicSizeImageProps {
 }
 
 function DynamicSizeImage({ url, alt, fallbackAspectRatio, onClick, onDownload }: DynamicSizeImageProps) {
-  const [actualSize, setActualSize] = useState<{ width: number; height: number } | null>(null);
+  const [, setActualSize] = useState<{ width: number; height: number } | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isError, setIsError] = useState(false);
   const [isMobile, setIsMobile] = useState(false);

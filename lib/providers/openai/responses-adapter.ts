@@ -85,9 +85,37 @@ export class ResponsesAdapter implements APIAdapter {
           }
           
           // 其他消息保持简单格式
+          // 处理多模态内容（content 可能是数组）
+          let formattedContent: any = m.content || '';
+          
+          if (Array.isArray(m.content)) {
+            // 将多模态内容转换为 Responses API 格式
+            formattedContent = m.content.map((item: any) => {
+              if (typeof item === 'string') {
+                return { type: 'input_text', text: item };
+              }
+              if (item && typeof item === 'object') {
+                if (item.type === 'text' || item.text) {
+                  return { type: 'input_text', text: item.text || item.content || '' };
+                }
+                if (item.type === 'image_url' || item.image_url) {
+                  const imageUrl = item.image_url?.url || item.image_url || '';
+                  return { type: 'input_image', image_url: imageUrl };
+                }
+                if (item.type === 'video_url' || item.video_url) {
+                  // Responses API 不直接支持视频，尝试作为图像处理或跳过
+                  const videoUrl = item.video_url?.url || item.video_url || '';
+                  return { type: 'input_image', image_url: videoUrl };
+                }
+                return { type: 'input_text', text: JSON.stringify(item) };
+              }
+              return { type: 'input_text', text: String(item) };
+            });
+          }
+          
           return [{
             role: m.role,
-            content: m.content || '',  // 确保 content 不为 null
+            content: formattedContent,
           }];
         }),
         // 转换 tools 格式从 Chat Completions 格式到 Responses API 格式

@@ -106,11 +106,6 @@ export const MessageRow = memo(({
     }
   }, [isUser, message.content]);
 
-  // 检查是否为pending状态的图像消息
-  const isPendingImageMessage = useMemo(() => {
-    return !isUser && isImageMessage && message.status === 'pending';
-  }, [isUser, isImageMessage, message.status]);
-
   const handleEditStart = () => message.id && onEditStart(message.id, message.content);
   const handleEditSave = () => message.id && onEditSave(message.id, editContent);
 

@@ -19,9 +19,12 @@ export interface ContentDeltas {
  * 转换参数为 Chat Completions 格式
  */
 export function translateToChatParams(input: TranslatorInput): Record<string, unknown> {
+  // 检查模型是否支持视觉输入
+  const supportsVision = input.modelConfig.modalities?.input?.includes('image') || false;
+  
   const params: Record<string, unknown> = {
     model: input.modelConfig.id,
-    messages: convertMessages(input.messages, input.instructions),
+    messages: convertMessages(input.messages, input.instructions, supportsVision),
     stream: true,
   };
 
@@ -185,10 +188,12 @@ export function extractTextFromContent(content: unknown): ContentDeltas {
 
 /**
  * 转换消息格式
+ * 对于不支持多模态的模型，过滤掉图像内容
  */
 function convertMessages(
   messages: UnifiedMessage[],
-  instructions?: string
+  instructions?: string,
+  supportsVision?: boolean
 ): Array<Record<string, unknown>> {
   const result: Array<Record<string, unknown>> = [];
 
@@ -208,9 +213,43 @@ function convertMessages(
         content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
       });
     } else if (msg.role === 'user') {
+      // 处理用户消息，支持多模态内容
+      let content: any = msg.content;
+      
+      // 如果内容包含图像但模型不支持视觉，过滤掉图像
+      if (!supportsVision && Array.isArray(msg.content)) {
+        const textParts = msg.content
+          .filter((part: any) => part.type === 'text' || typeof part === 'string')
+          .map((part: any) => {
+            if (typeof part === 'string') return part;
+            if (part.type === 'text') return part.text || '';
+            return '';
+          })
+          .filter(Boolean);
+        
+        // 检查是否有被过滤的图像
+        const hasImage = msg.content.some((part: any) => 
+          part.type === 'image_url' || part.type === 'video_url' || part.type === 'file_url'
+        );
+        
+        if (hasImage) {
+          logger.warn('Filtering image content for non-vision model', {
+            model: 'unknown',
+            originalParts: msg.content.length,
+            textParts: textParts.length
+          });
+        }
+        
+        // 合并所有文本
+        content = textParts.join('\n');
+        if (!content.trim()) {
+          content = '[Image content filtered - model does not support vision]';
+        }
+      }
+      
       result.push({
         role: 'user',
-        content: msg.content
+        content
       });
     } else if (msg.role === 'assistant') {
       const assistantMsg: Record<string, unknown> = {

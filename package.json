@@ -54,7 +54,11 @@
     "next": "^16.1.6",
     "next-auth": "5.0.0-beta.30",
     "openai": "^6.22.0",
+    "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
+    "pdf-text-reader": "^5.1.1",
+    "pdf2json": "^4.0.2",
+    "pdfreader": "^3.0.8",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-highlight-words": "^0.21.0",
@@ -70,7 +74,9 @@
     "remark-math": "^6.0.0",
     "shiki": "^3.22.0",
     "tailwind-merge": "^3.5.0",
+    "word-extractor": "^1.0.4",
     "ws": "^8.19.0",
+    "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {

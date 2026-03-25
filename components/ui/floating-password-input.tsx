@@ -12,7 +12,8 @@ export interface FloatingPasswordInputProps
 const FloatingPasswordInput = React.forwardRef<HTMLInputElement, FloatingPasswordInputProps>(
   ({ className, label, id, ...props }, ref) => {
     const [showPassword, setShowPassword] = React.useState(false)
-    const inputId = id || React.useId()
+    const generatedId = React.useId()
+    const inputId = id || generatedId
 
     return (
       <div className="relative">

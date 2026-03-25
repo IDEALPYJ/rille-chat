@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const { 
       archiveUnusedDays = 90, 
       minLength = 10,
-      mergeThreshold = 0.92 
+      mergeThreshold: _mergeThreshold = 0.92 
     } = body;
 
     const result = {

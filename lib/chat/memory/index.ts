@@ -64,7 +64,7 @@ export async function processMemory(options: ProcessMemoryOptions): Promise<void
     embeddingModel,
     settings,
     userInput,
-    aiResponse,
+    aiResponse: _aiResponse,
     conversationHistory = [],
   } = options;
 

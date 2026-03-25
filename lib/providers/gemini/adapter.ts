@@ -136,9 +136,43 @@ export class GeminiAdapter implements APIAdapter {
             };
           }
           
+          // 处理多模态内容
+          const parts: any[] = [];
+          
+          if (typeof m.content === 'string') {
+            parts.push({ text: m.content || '' });
+          } else if (Array.isArray(m.content)) {
+            for (const part of m.content) {
+              if (part.type === 'text' && part.text) {
+                parts.push({ text: part.text });
+              } else if (part.type === 'image_url' && part.image_url?.url) {
+                const imageUrl = part.image_url.url;
+                if (imageUrl.startsWith('data:')) {
+                  const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+                  if (match) {
+                    parts.push({
+                      inlineData: {
+                        mimeType: match[1],
+                        data: match[2],
+                      },
+                    });
+                  } else {
+                    parts.push({ text: '[Image]' });
+                  }
+                } else {
+                  parts.push({ text: `[Image: ${imageUrl}]` });
+                }
+              }
+            }
+          }
+          
+          if (parts.length === 0) {
+            parts.push({ text: '' });
+          }
+          
           return {
             role: m.role === 'assistant' ? 'model' : m.role,
-            parts: [{ text: m.content || '' }]
+            parts
           };
         }),
         ...((baseArgs.extra as any)?.tools && {
