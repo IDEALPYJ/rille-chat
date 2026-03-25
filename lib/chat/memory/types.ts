@@ -158,6 +158,14 @@ export interface RetrievalOptions {
 }
 
 /**
+ * 消息类型
+ */
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/**
  * 记忆处理选项
  */
 export interface ProcessMemoryOptions {
@@ -183,6 +191,9 @@ export interface ProcessMemoryOptions {
   settings: {
     providers: Record<string, any>;
   };
+  
+  /** 对话历史（可选，用于智能触发检测） */
+  conversationHistory?: Message[];
 }
 
 /**

@@ -5,8 +5,11 @@
 
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { MemoryOperation, MemoryStatus, RetrievalMode } from "./types";
+import { Memory, MemoryOperation, MemoryStatus, RetrievalMode } from "./types";
 import { generateEmbedding, embeddingToBuffer } from "./embedding";
+import { computeContentHash, calculateTextSimilarity } from "./duplicate-detection";
+import { selectMergeStrategy, executeMerge } from "./smart-merge";
+import { findSimilarMemories } from "./retrieval";
 
 /**
  * 执行记忆操作列表
@@ -68,7 +71,7 @@ export async function executeMemoryOperations(
 }
 
 /**
- * 执行添加操作
+ * 执行添加操作（增强版，带重复检测和智能合并）
  */
 async function executeAdd(
   op: MemoryOperation,
@@ -81,7 +84,43 @@ async function executeAdd(
   // 1. 解析项目 ID
   const targetProjectId = await resolveProjectId(projectId, userId);
 
-  // 2. 生成 embedding（如果是向量模式）
+  // 2. 重复检测（新增）
+  const duplicateCheck = await checkDuplicateInDB(op, userId, targetProjectId);
+  
+  if (duplicateCheck.isDuplicate) {
+    switch (duplicateCheck.recommendedAction) {
+      case 'skip':
+        logger.debug("Duplicate memory skipped", {
+          type: duplicateCheck.duplicateType,
+          similarity: duplicateCheck.similarity,
+        });
+        return;
+        
+      case 'update':
+        // 用新内容更新现有记忆
+        if (duplicateCheck.existingMemory) {
+          await updateExistingMemory(duplicateCheck.existingMemory.id, op, mode, embeddingModel, providers);
+          logger.debug("Memory updated (superset)", {
+            existingId: duplicateCheck.existingMemory.id,
+          });
+          return;
+        }
+        break;
+        
+      case 'merge':
+        // 智能合并
+        if (duplicateCheck.existingMemory) {
+          await mergeWithExisting(duplicateCheck.existingMemory, op, mode, embeddingModel, providers);
+          logger.debug("Memory merged", {
+            existingId: duplicateCheck.existingMemory.id,
+          });
+          return;
+        }
+        break;
+    }
+  }
+
+  // 3. 生成 embedding（如果是向量模式）
   let embeddingBuffer: Buffer | null = null;
   if (mode === "vector" && embeddingModel) {
     const embeddingResult = await generateEmbedding(op.content, embeddingModel, providers);
@@ -90,16 +129,20 @@ async function executeAdd(
     }
   }
 
-  // 3. 确定初始状态
+  // 4. 计算内容哈希（新增）
+  const contentHash = computeContentHash(op.content);
+
+  // 5. 确定初始状态
   // Profile 类型或重要性 >= 4 的直接设为 active，否则为 candidate
   const initialStatus: MemoryStatus =
     op.importance >= 4 || op.root === "Profile" ? "active" : "candidate";
 
-  // 4. 插入数据库
+  // 6. 插入数据库
   await db.$executeRaw`
     INSERT INTO "Memory" (
       id,
       content,
+      "contentHash",
       "embedding_vector",
       "root",
       "status",
@@ -113,6 +156,7 @@ async function executeAdd(
     ) VALUES (
       gen_random_uuid(),
       ${op.content},
+      ${contentHash},
       ${embeddingBuffer}::bytea,
       ${op.root},
       ${initialStatus},
@@ -132,6 +176,213 @@ async function executeAdd(
     status: initialStatus,
     importance: op.importance,
   });
+}
+
+/**
+ * 在数据库中检查重复
+ */
+async function checkDuplicateInDB(
+  newMemory: MemoryOperation,
+  userId: string,
+  projectId: string | null
+): Promise<{
+  isDuplicate: boolean;
+  duplicateType: 'exact' | 'semantic' | 'superset' | 'subset' | 'none';
+  existingMemory?: Memory;
+  similarity: number;
+  recommendedAction: 'skip' | 'merge' | 'update' | 'keep';
+}> {
+  // 1. 精确匹配（内容完全相同）
+  const exactMatch = await db.$queryRaw<Memory[]>`
+    SELECT * FROM "Memory"
+    WHERE "userId" = ${userId}
+      AND ("projectId" IS NULL OR "projectId" = ${projectId})
+      AND "status" IN ('active', 'candidate')
+      AND content = ${newMemory.content}
+    LIMIT 1
+  `;
+  
+  if (exactMatch.length > 0) {
+    return {
+      isDuplicate: true,
+      duplicateType: 'exact',
+      existingMemory: exactMatch[0],
+      similarity: 1.0,
+      recommendedAction: 'skip',
+    };
+  }
+  
+  // 2. 获取用户的活跃记忆进行相似度比较
+  const existingMemories = await db.$queryRaw<Memory[]>`
+    SELECT * FROM "Memory"
+    WHERE "userId" = ${userId}
+      AND ("projectId" IS NULL OR "projectId" = ${projectId})
+      AND "status" IN ('active', 'candidate')
+    ORDER BY "last_accessed" DESC
+    LIMIT 50
+  `;
+  
+  if (existingMemories.length === 0) {
+    return {
+      isDuplicate: false,
+      duplicateType: 'none',
+      similarity: 0,
+      recommendedAction: 'keep',
+    };
+  }
+  
+  // 3. 文本相似度检查
+  let bestMatch: Memory | undefined;
+  let bestSimilarity = 0;
+  
+  for (const memory of existingMemories) {
+    const similarity = calculateTextSimilarity(newMemory.content, memory.content);
+    if (similarity > bestSimilarity) {
+      bestSimilarity = similarity;
+      bestMatch = memory;
+    }
+  }
+  
+  // 4. 判断重复类型
+  if (bestSimilarity >= 0.95 && bestMatch) {
+    return {
+      isDuplicate: true,
+      duplicateType: 'semantic',
+      existingMemory: bestMatch,
+      similarity: bestSimilarity,
+      recommendedAction: 'skip',
+    };
+  }
+  
+  if (bestSimilarity >= 0.85 && bestMatch) {
+    const newLower = newMemory.content.toLowerCase();
+    const existingLower = bestMatch.content.toLowerCase();
+    
+    if (newLower.includes(existingLower) && newLower.length > existingLower.length * 1.3) {
+      return {
+        isDuplicate: true,
+        duplicateType: 'superset',
+        existingMemory: bestMatch,
+        similarity: bestSimilarity,
+        recommendedAction: 'update',
+      };
+    }
+    
+    if (existingLower.includes(newLower) && existingLower.length > newLower.length * 1.3) {
+      return {
+        isDuplicate: true,
+        duplicateType: 'subset',
+        existingMemory: bestMatch,
+        similarity: bestSimilarity,
+        recommendedAction: 'skip',
+      };
+    }
+    
+    return {
+      isDuplicate: false,
+      duplicateType: 'none',
+      existingMemory: bestMatch,
+      similarity: bestSimilarity,
+      recommendedAction: 'merge',
+    };
+  }
+  
+  return {
+    isDuplicate: false,
+    duplicateType: 'none',
+    similarity: bestSimilarity,
+    recommendedAction: 'keep',
+  };
+}
+
+/**
+ * 更新现有记忆
+ */
+async function updateExistingMemory(
+  memoryId: string,
+  op: MemoryOperation,
+  mode: RetrievalMode,
+  embeddingModel: string | undefined,
+  providers: Record<string, any>
+): Promise<void> {
+  // 生成新的 embedding
+  let embeddingBuffer: Buffer | null = null;
+  if (mode === "vector" && embeddingModel) {
+    const embeddingResult = await generateEmbedding(op.content, embeddingModel, providers);
+    if (embeddingResult) {
+      embeddingBuffer = embeddingToBuffer(embeddingResult.embedding);
+    }
+  }
+  
+  const contentHash = computeContentHash(op.content);
+  
+  await db.$executeRaw`
+    UPDATE "Memory"
+    SET 
+      content = ${op.content},
+      "contentHash" = ${contentHash},
+      "embedding_vector" = ${embeddingBuffer}::bytea,
+      "root" = ${op.root},
+      "importance" = ${op.importance},
+      "frequency" = "frequency" + 1,
+      "last_accessed" = NOW(),
+      "updatedAt" = NOW()
+    WHERE id = ${memoryId}
+  `;
+}
+
+/**
+ * 与现有记忆合并
+ */
+async function mergeWithExisting(
+  existing: Memory,
+  op: MemoryOperation,
+  mode: RetrievalMode,
+  embeddingModel: string | undefined,
+  providers: Record<string, any>
+): Promise<void> {
+  const strategy = selectMergeStrategy(existing, op);
+  
+  if (strategy.type === 'skip') {
+    // 只增加频率
+    await db.$executeRaw`
+      UPDATE "Memory"
+      SET 
+        "frequency" = "frequency" + 1,
+        "last_accessed" = NOW(),
+        "updatedAt" = NOW()
+      WHERE id = ${existing.id}
+    `;
+    return;
+  }
+  
+  // 执行合并（不使用 LLM，简化处理）
+  const mergeResult = await executeMerge(existing, op, strategy);
+  
+  if (mergeResult.success) {
+    // 生成新的 embedding
+    let embeddingBuffer: Buffer | null = null;
+    if (mode === "vector" && embeddingModel) {
+      const embeddingResult = await generateEmbedding(mergeResult.finalContent, embeddingModel, providers);
+      if (embeddingResult) {
+        embeddingBuffer = embeddingToBuffer(embeddingResult.embedding);
+      }
+    }
+    
+    const contentHash = computeContentHash(mergeResult.finalContent);
+    
+    await db.$executeRaw`
+      UPDATE "Memory"
+      SET 
+        content = ${mergeResult.finalContent},
+        "contentHash" = ${contentHash},
+        "embedding_vector" = ${embeddingBuffer}::bytea,
+        "frequency" = "frequency" + 1,
+        "last_accessed" = NOW(),
+        "updatedAt" = NOW()
+      WHERE id = ${existing.id}
+    `;
+  }
 }
 
 /**

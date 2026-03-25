@@ -17,12 +17,39 @@ export {
   archiveStaleMemories,
 } from "./operations";
 
+// 新增：质量控制和优化模块
+export { assessInformationValue, makeTriggerDecision } from "./value-assessment";
+export { filterExtractionQuality } from "./extraction-filter";
+export { checkDuplicateLocal, computeContentHash, calculateTextSimilarity } from "./duplicate-detection";
+export { selectMergeStrategy, intelligentlyMerge, executeMerge } from "./smart-merge";
+export { applyTemporalDecay, calculateDecayMultiplier, getHalfLifeDescription } from "./advanced-retrieval";
+export { mmrRerank, applyMMRToMemories, DEFAULT_MMR_CONFIG } from "./mmr";
+export { 
+  generateCacheKey, 
+  getFromMemoryCache, 
+  setMemoryCache, 
+  generateEmbeddingWithCache,
+  bufferToArray,
+  arrayToBuffer
+} from "./embedding-cache";
+export { 
+  performMaintenance, 
+  shouldArchiveMemory, 
+  isLowQualityMemory,
+  calculateMemoryQualityScore 
+} from "./maintenance";
+
 // 主处理函数
-import { ProcessMemoryOptions, MemoryOperation, RetrievalMode } from "./types";
+import { ProcessMemoryOptions, MemoryOperation, RetrievalMode, Message } from "./types";
 import { extractMemoryOperations } from "./extraction";
 import { executeMemoryOperations } from "./operations";
 import { getRetrievalMode } from "./retrieval";
 import { logger } from "@/lib/logger";
+import { makeTriggerDecision } from "./value-assessment";
+import { filterExtractionQuality } from "./extraction-filter";
+
+// 全局状态：记录上次提取的轮次
+const userLastExtractionRound = new Map<string, number>();
 
 /**
  * 处理记忆（主入口）
@@ -36,19 +63,44 @@ export async function processMemory(options: ProcessMemoryOptions): Promise<void
     extractionModel,
     embeddingModel,
     settings,
+    userInput,
+    aiResponse,
+    conversationHistory = [],
   } = options;
 
   try {
-    // 1. 确定检索模式
+    // 1. 智能触发检测（新增）
+    const lastRound = userLastExtractionRound.get(userId) || 0;
+    const triggerDecision = makeTriggerDecision(
+      userInput,
+      conversationHistory as Message[],
+      lastRound,
+      { forceInterval: 5, minValueThreshold: 0.5 }
+    );
+
+    if (!triggerDecision.shouldExtract) {
+      logger.debug("Skipping memory extraction", {
+        userId,
+        reason: triggerDecision.reason,
+        valueScore: triggerDecision.valueScore,
+      });
+      return;
+    }
+
+    // 更新最后提取轮次
+    userLastExtractionRound.set(userId, conversationHistory.length);
+
+    // 2. 确定检索模式
     const mode: RetrievalMode = getRetrievalMode(embeddingModel);
 
     logger.debug("Processing memories", {
       userId,
       mode,
+      priority: triggerDecision.priority,
       hasEmbeddingModel: !!embeddingModel,
     });
 
-    // 2. 提取记忆操作
+    // 3. 提取记忆操作
     const operations: MemoryOperation[] = await extractMemoryOperations(options);
 
     if (operations.length === 0) {
@@ -56,9 +108,28 @@ export async function processMemory(options: ProcessMemoryOptions): Promise<void
       return;
     }
 
-    // 3. 执行操作
+    // 4. 质量过滤（新增）
+    const filteredOperations: MemoryOperation[] = [];
+    for (const op of operations) {
+      const qualityCheck = filterExtractionQuality(op, userInput);
+      if (qualityCheck.passed) {
+        filteredOperations.push(op);
+      } else {
+        logger.debug("Memory operation filtered by quality check", {
+          reason: qualityCheck.rejectionReason,
+          content: op.content.slice(0, 50),
+        });
+      }
+    }
+
+    if (filteredOperations.length === 0) {
+      logger.debug("All memory operations filtered by quality check");
+      return;
+    }
+
+    // 5. 执行操作
     const result = await executeMemoryOperations(
-      operations,
+      filteredOperations,
       userId,
       projectId,
       mode,
@@ -68,6 +139,8 @@ export async function processMemory(options: ProcessMemoryOptions): Promise<void
 
     logger.info("Memory processing completed", {
       userId,
+      originalCount: operations.length,
+      filteredCount: filteredOperations.length,
       ...result,
     });
   } catch (error) {

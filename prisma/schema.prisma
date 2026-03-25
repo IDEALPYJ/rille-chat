@@ -37,9 +37,13 @@ model Memory {
   id      String @id @default(cuid())
   content String // 记忆内容
 
+  // 内容哈希（用于重复检测）
+  contentHash String? @map("content_hash")
+
   // 向量数据（可选，关键词模式时为 null）
-  // 实际向量存储在 migration 中创建的 embedding_vector 列
-  embedding Bytes?
+  // 实际向量存储在 embedding_vector 列（pgvector 扩展）
+  // 使用 Unsupported 类型因为 Prisma 不原生支持 pgvector
+  embedding Unsupported("vector")? @map("embedding_vector")
 
   // 记忆分类
   root String? // Profile | Preference | Ability | Goal | Context
@@ -72,6 +76,7 @@ model Memory {
   @@index([projectId])
   @@index([status])
   @@index([root])
+  @@index([contentHash])
 }
 
 model Prompt {
@@ -424,4 +429,22 @@ model SessionSkill {
   @@unique([sessionId, skillId])
   @@index([sessionId])
   @@index([skillId])
+}
+
+// --------------------------------------
+// 7. Embedding 缓存表
+// --------------------------------------
+
+model EmbeddingCache {
+  id        String   @id @default(cuid())
+  hash      String   // 内容哈希
+  content   String   // 原始内容（截断存储）
+  model     String   // 模型标识
+  embedding Bytes    // 向量数据
+  dims      Int      // 向量维度
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([hash, model])
+  @@index([hash])
+  @@index([model])
 }

@@ -26,6 +26,21 @@ export async function GET(req: NextRequest) {
       orderBy: {
         createdAt: "desc",
       },
+      select: {
+        id: true,
+        content: true,
+        contentHash: true,
+        root: true,
+        status: true,
+        frequency: true,
+        importance: true,
+        lastAccessed: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
+        projectId: true,
+        // embedding 字段被排除
+      },
     });
 
     return NextResponse.json({ memories });
@@ -49,6 +64,7 @@ export async function DELETE(req: NextRequest) {
     // Verify ownership
     const memory = await db.memory.findUnique({
       where: { id },
+      select: { id: true, userId: true },
     });
 
     if (!memory || memory.userId !== userId) {
@@ -79,6 +95,7 @@ export async function PATCH(req: NextRequest) {
 
     const memory = await db.memory.findUnique({
       where: { id },
+      select: { id: true, userId: true },
     });
 
     if (!memory || memory.userId !== userId) {

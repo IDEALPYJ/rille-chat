@@ -13,6 +13,8 @@ import {
   calculateDecayFactor,
 } from "./types";
 import { generateEmbedding, isVectorModeEnabled } from "./embedding";
+import { applyMMRToMemories, DEFAULT_MMR_CONFIG } from "./mmr";
+import { applyTemporalDecay } from "./advanced-retrieval";
 
 /**
  * 执行记忆检索（智能混合模式）
@@ -329,7 +331,7 @@ async function retrieveByKeyword(
 }
 
 /**
- * 应用衰减因子和 Token 限制
+ * 应用衰减因子、MMR 重排序和 Token 限制
  */
 function applyDecayAndTokenLimit<
   T extends {
@@ -344,17 +346,53 @@ function applyDecayAndTokenLimit<
   }
 >(results: T[], limit: number, maxTokens: number): MemoryRetrievalResult[] {
   const now = new Date();
+  
+  // 1. 先应用时间衰减
+  const withDecay = results.map(item => {
+    // 计算衰减因子（使用新的时间衰减函数）
+    const memoryForDecay: import('./types').Memory = {
+      id: item.id,
+      content: item.content,
+      root: item.root || 'Context',
+      frequency: 1,
+      status: 'active',
+      lastAccessed: item.lastAccessed,
+      createdAt: item.lastAccessed,
+      updatedAt: item.lastAccessed,
+      userId: '',
+      importance: item.importance,
+      embedding: null,
+      projectId: null,
+    };
+    
+    const adjustedScore = applyTemporalDecay(item.final_score, memoryForDecay, now);
+    
+    return {
+      id: item.id,
+      content: item.content,
+      root: item.root,
+      importance: item.importance,
+      score: adjustedScore,
+      semanticScore: item.semantic_score,
+      keywordScore: item.keyword_score,
+    };
+  });
+  
+  // 2. 按分数排序
+  withDecay.sort((a, b) => b.score - a.score);
+  
+  // 3. 应用 MMR 重排序（增加多样性）
+  const mmrResults = applyMMRToMemories(withDecay, {
+    enabled: DEFAULT_MMR_CONFIG.enabled,
+    lambda: DEFAULT_MMR_CONFIG.lambda,
+    maxResults: limit * 2, // 先获取多一些，再按 token 限制
+  });
+  
+  // 4. 应用 Token 限制
   const selected: MemoryRetrievalResult[] = [];
   let currentTokens = 0;
   
-  for (const item of results) {
-    // 计算衰减因子
-    const daysSinceAccess = (now.getTime() - item.lastAccessed.getTime()) / (1000 * 60 * 60 * 24);
-    const decayFactor = calculateDecayFactor(item.root, daysSinceAccess);
-    
-    // 应用衰减后的评分
-    const adjustedScore = item.final_score * decayFactor;
-    
+  for (const item of mmrResults) {
     // 估算 token 数（粗略估计：1 token ≈ 4 字符）
     const estimatedTokens = Math.ceil(item.content.length / 4);
     
@@ -363,15 +401,7 @@ function applyDecayAndTokenLimit<
       break;
     }
     
-    selected.push({
-      id: item.id,
-      content: item.content,
-      root: item.root,
-      importance: item.importance,
-      score: adjustedScore,
-      semanticScore: item.semantic_score,
-      keywordScore: item.keyword_score,
-    });
+    selected.push(item);
     
     currentTokens += estimatedTokens;
     
