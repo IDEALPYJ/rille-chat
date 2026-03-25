@@ -9,7 +9,7 @@ import { Memory, MemoryOperation, MemoryStatus, RetrievalMode } from "./types";
 import { generateEmbedding, embeddingToBuffer } from "./embedding";
 import { computeContentHash, calculateTextSimilarity } from "./duplicate-detection";
 import { selectMergeStrategy, executeMerge } from "./smart-merge";
-import { findSimilarMemories } from "./retrieval";
+
 
 /**
  * 执行记忆操作列表

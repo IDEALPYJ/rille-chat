@@ -191,11 +191,16 @@ export function extractTextFromContent(content: unknown): ContentDeltas {
  * 对于不支持多模态的模型，过滤掉图像内容
  */
 function convertMessages(
-  messages: UnifiedMessage[],
+  messages: UnifiedMessage[] | undefined,
   instructions?: string,
   supportsVision?: boolean
 ): Array<Record<string, unknown>> {
   const result: Array<Record<string, unknown>> = [];
+  
+  // 如果 messages 未定义，返回空数组
+  if (!messages || !Array.isArray(messages)) {
+    return result;
+  }
 
   // 添加系统指令
   if (instructions) {

@@ -52,7 +52,7 @@ export function getReasoningConfig(
     ? preferredMode
     : intensity.supportedModes[0];
 
-  if (mode === 'adaptive' && intensity.adaptive) {
+  if (mode === 'adaptive' && intensity.adaptive?.options) {
     return {
       kind: 'adaptive',
       fieldPath: intensity.adaptive.mapping || 'thinking.type',
@@ -64,7 +64,7 @@ export function getReasoningConfig(
     };
   }
 
-  if (mode === 'effort' && intensity.effort) {
+  if (mode === 'effort' && intensity.effort?.options) {
     return {
       kind: 'effort',
       fieldPath: intensity.effort.mapping || 'reasoning.effort',

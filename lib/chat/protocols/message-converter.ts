@@ -82,7 +82,7 @@ async function convertFileToBase64(
  * 判断文件类型是否应该以 base64 格式直接上传
  * （而不是在本地解析成文本）
  */
-function shouldUploadAsBase64(mimeType: string, fileName: string): boolean {
+function shouldUploadAsBase64(mimeType: string, _fileName: string): boolean {
   // 图像文件：直接上传 base64
   if (mimeType.startsWith('image/')) return true;
   
@@ -103,7 +103,7 @@ function shouldUploadAsBase64(mimeType: string, fileName: string): boolean {
  */
 export async function convertToUnifiedMessages(
   messages: Message[],
-  config: FileProcessingConfig = defaultFileConfig
+  _config: FileProcessingConfig = defaultFileConfig
 ): Promise<UnifiedMessage[]> {
   return Promise.all(messages.map(async (msg) => {
     const unified: UnifiedMessage = {
