@@ -2823,6 +2823,84 @@ export const openrouterModelConfigs: ModelConfig[] = [
             }]
     },
     {
+        id: "x-ai/grok-4.20-beta",
+        displayName: "Grok 4.2",
+        avatar: "grok",
+        releasedAt: "2026-03-12",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 2000000,
+        maxOutput: 2000000,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 2.00, condition: { input: [0, 200000] } },
+                        { rate: 4.00, condition: { input: [200000, 'infinity'] } }
+                    ]
+                },
+                { type: "text", name: "cacheRead", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 0.20, condition: { input: [0, 200000] } },
+                        { rate: 0.40, condition: { input: [200000, 'infinity'] } }
+                    ]
+                },
+                { type: "text", name: "output", unit: "1M_tokens",
+                    tiers: [
+                        { rate: 6.00, condition: { input: [0, 200000] } },
+                        { rate: 12.00, condition: { input: [200000, 'infinity'] } }
+                    ]
+                },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 25.00, condition: "xai"}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "structured_outputs", "function_calling"],
+        builtinTools: ["web_search"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["none", "minimal", "low", "medium", "high", "xhigh"],
+                    default: "high"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "engine",
+                type: "select",
+                options: ["native", "exa"],
+                default: "native"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 0.7
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 0.95
+            }
+        ]
+    },
+    {
         id: "x-ai/grok-4.1-fast",
         displayName: "Grok 4.1 Fast",
         avatar: "grok",
@@ -4305,6 +4383,54 @@ export const openrouterModelConfigs: ModelConfig[] = [
         displayName: "MiniMax M2.5",
         avatar: "minimax",
         releasedAt: "2026-02-12",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 204800,
+        maxOutput: 131072,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", unit: "1M_tokens", tiers: [{rate: 0.30}] },
+                { type: "text", name: "output", unit: "1M_tokens", tiers: [{rate: 1.20}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
+            ]
+        },
+
+        modalities: {
+            input: ["text"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "structured_outputs", "function_calling"],
+        builtinTools: ["web_search"],
+
+        reasoning: {
+            readonly: true,
+            defaultEnabled: true
+        },
+
+        parameters: [
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 0.9
+            }
+        ]
+    },
+    {
+        id: "minimax/minimax-m2.7",
+        displayName: "MiniMax M2.7",
+        avatar: "minimax",
+        releasedAt: "2026-03-18",
         modelType: "chat",
         apiType: "openai:responses",
 

@@ -85,20 +85,20 @@ export const mistralModelConfigs: ModelConfig[] = [
     },
     {
         id: "mistral-small-latest",
-        displayName: "Mistral Small 3.2",
+        displayName: "Mistral Small 4",
         avatar: "mistral",
-        releasedAt: "2025-06-20",
+        releasedAt: "2026-03-16",
         modelType: "chat",
         apiType: "openai:chat-completions",
 
-        contextWindow: 131072,
-        maxOutput: 131072,
+        contextWindow: 262144,
+        maxOutput: 262144,
 
         pricing: {
             currency: "USD",
             items: [
-                { type: "text", name: "input", unit: "1M_tokens", tiers: [{ rate: 0.10 }] },
-                { type: "text", name: "output", unit: "1M_tokens", tiers: [{ rate: 0.30 }] },
+                { type: "text", name: "input", unit: "1M_tokens", tiers: [{ rate: 0.15 }] },
+                { type: "text", name: "output", unit: "1M_tokens", tiers: [{ rate: 0.60 }] },
             ]
         },
 

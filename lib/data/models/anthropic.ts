@@ -20,26 +20,26 @@ export const anthropicModelConfigs: ModelConfig[] = [
             items: [
                 {
                     type: "text", name: "input", unit: "1M_tokens",
-                    tiers: [{ rate: 3.00, condition: { input: [0, 200000] } },
-                    { rate: 6.00, condition: { input: [200000, "infinity"] } }
+                    tiers: [{ rate: 5.00, condition: { input: [0, 200000] } },
+                    { rate: 10.00, condition: { input: [200000, "infinity"] } }
                     ]
                 },
                 {
                     type: "text", name: "cacheRead", unit: "1M_tokens",
-                    tiers: [{ rate: 0.30, condition: { input: [0, 200000] } },
-                    { rate: 0.60, condition: { input: [200000, "infinity"] } }
+                    tiers: [{ rate: 0.50, condition: { input: [0, 200000] } },
+                    { rate: 1.00, condition: { input: [200000, "infinity"] } }
                     ]
                 },
                 {
                     type: "text", name: "cacheWrite", unit: "1M_tokens",
-                    tiers: [{ rate: 3.75, condition: { input: [0, 200000] } },
-                    { rate: 7.50, condition: { input: [200000, "infinity"] } }
+                    tiers: [{ rate: 6.25, condition: { input: [0, 200000] } },
+                    { rate: 12.50, condition: { input: [200000, "infinity"] } }
                     ]
                 },
                 {
                     type: "text", name: "output", unit: "1M_tokens",
-                    tiers: [{ rate: 15.00, condition: { input: [0, 200000] } },
-                    { rate: 22.50, condition: { input: [200000, "infinity"] } }
+                    tiers: [{ rate: 25.00, condition: { input: [0, 200000] } },
+                    { rate: 37.50, condition: { input: [200000, "infinity"] } }
                     ]
                 },
                 { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{ rate: 10.00 }] },
@@ -125,26 +125,26 @@ export const anthropicModelConfigs: ModelConfig[] = [
             items: [
                 {
                     type: "text", name: "input", unit: "1M_tokens",
-                    tiers: [{ rate: 5.00, condition: { input: [0, 200000] } },
-                    { rate: 10.00, condition: { input: [200000, "infinity"] } }
+                    tiers: [{ rate: 3.00, condition: { input: [0, 200000] } },
+                    { rate: 6.00, condition: { input: [200000, "infinity"] } }
                     ]
                 },
                 {
                     type: "text", name: "cacheRead", unit: "1M_tokens",
-                    tiers: [{ rate: 0.50, condition: { input: [0, 200000] } },
-                    { rate: 1.00, condition: { input: [200000, "infinity"] } }
+                    tiers: [{ rate: 0.30, condition: { input: [0, 200000] } },
+                    { rate: 0.60, condition: { input: [200000, "infinity"] } }
                     ]
                 },
                 {
                     type: "text", name: "cacheWrite", unit: "1M_tokens",
-                    tiers: [{ rate: 6.25, condition: { input: [0, 200000] } },
-                    { rate: 12.50, condition: { input: [200000, "infinity"] } }
+                    tiers: [{ rate: 3.75, condition: { input: [0, 200000] } },
+                    { rate: 7.50, condition: { input: [200000, "infinity"] } }
                     ]
                 },
                 {
                     type: "text", name: "output", unit: "1M_tokens",
-                    tiers: [{ rate: 25.00, condition: { input: [0, 200000] } },
-                    { rate: 37.50, condition: { input: [200000, "infinity"] } }
+                    tiers: [{ rate: 15.00, condition: { input: [0, 200000] } },
+                    { rate: 22.50, condition: { input: [200000, "infinity"] } }
                     ]
                 },
                 { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{ rate: 10.00 }] },
