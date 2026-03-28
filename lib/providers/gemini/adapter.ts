@@ -79,6 +79,13 @@ export class GeminiAdapter implements APIAdapter {
     } else {
       // BaseCallArgs 类型 - 构建基本参数
       const baseArgs = input as BaseCallArgs;
+      
+      // 安全检查：确保 messages 是数组
+      if (!baseArgs.messages || !Array.isArray(baseArgs.messages)) {
+        logger.error('GeminiAdapter received invalid messages', { messages: baseArgs.messages });
+        throw new Error('Invalid messages: messages must be a non-empty array');
+      }
+      
       modelId = baseArgs.model;
       requestBody = {
         contents: baseArgs.messages.map(m => {

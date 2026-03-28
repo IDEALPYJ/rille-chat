@@ -326,6 +326,13 @@ export class AnthropicAdapter implements APIAdapter {
     } else {
       // BaseCallArgs 类型 - 构建基本参数
       const baseArgs = input as BaseCallArgs;
+      
+      // 安全检查：确保 messages 是数组
+      if (!baseArgs.messages || !Array.isArray(baseArgs.messages)) {
+        logger.error('AnthropicAdapter received invalid messages', { messages: baseArgs.messages });
+        throw new Error('Invalid messages: messages must be a non-empty array');
+      }
+      
       requestBody = {
         model: baseArgs.model,
         messages: baseArgs.messages.map(m => {

@@ -74,6 +74,12 @@ export async function saveMessageHistory(
   // 1. m.id 可能直接是 DB 的 id (如果是加载历史后发送的消息)
   // 2. m.id 可能是 traceId (如果是当前会话新产生的消息)
   
+  // 安全检查：确保 messages 是数组
+  if (!messages || !Array.isArray(messages)) {
+    logger.warn('saveMessagesToDB received invalid messages', { messages });
+    return new Map<string, string>();
+  }
+  
   const messageIds = messages.map(m => m.id).filter((id): id is string => !!id);
   
   const existingMessages = await db.message.findMany({

@@ -134,6 +134,12 @@ export function createMcpRecursiveStream(
       let step = 0;
       let toolCallUsage = createEmptyMcpUsage();
 
+      // 安全检查：确保 messages 是数组
+      if (!params.messages || !Array.isArray(params.messages)) {
+        logger.error('createMcpRecursiveStream received invalid messages', { messages: params.messages });
+        throw new Error('Invalid messages: messages must be a non-empty array');
+      }
+
       // 维护当前的对话历史
       const currentMessages = params.messages.map(msg => ({
         role: msg.role,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { env } from "./env";
 import { logger } from "./logger";
 
-const ALLOWED_ORIGINS = env.ALLOWED_ORIGINS.split(",").map(origin => origin.trim());
+const ALLOWED_ORIGINS = (env.ALLOWED_ORIGINS || "*").split(",").map(origin => origin.trim());
 
 /**
  * 处理 CORS 请求

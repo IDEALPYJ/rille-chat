@@ -47,6 +47,13 @@ export class OpenRouterAdapter implements APIAdapter {
     } else {
       // BaseCallArgs 类型 - 构建基本参数
       const baseArgs = input as BaseCallArgs;
+      
+      // 安全检查：确保 messages 是数组
+      if (!baseArgs.messages || !Array.isArray(baseArgs.messages)) {
+        logger.error('OpenRouterAdapter received invalid messages', { messages: baseArgs.messages });
+        throw new Error('Invalid messages: messages must be a non-empty array');
+      }
+      
       params = {
         model: baseArgs.model,
         input: baseArgs.messages.flatMap(m => {

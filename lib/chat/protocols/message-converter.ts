@@ -105,6 +105,12 @@ export async function convertToUnifiedMessages(
   messages: Message[],
   config: FileProcessingConfig = defaultFileConfig
 ): Promise<UnifiedMessage[]> {
+  // 安全检查：确保 messages 是数组
+  if (!messages || !Array.isArray(messages)) {
+    logger.warn('convertToUnifiedMessages received invalid messages', { messages });
+    return [];
+  }
+  
   return Promise.all(messages.map(async (msg) => {
     const unified: UnifiedMessage = {
       role: msg.role === 'data' ? 'user' : msg.role, // 将 'data' 转换为 'user'

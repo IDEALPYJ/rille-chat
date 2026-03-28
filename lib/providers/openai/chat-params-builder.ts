@@ -196,6 +196,12 @@ function convertMessages(
   supportsVision?: boolean
 ): Array<Record<string, unknown>> {
   const result: Array<Record<string, unknown>> = [];
+  
+  // 安全检查：确保 messages 是数组
+  if (!messages || !Array.isArray(messages)) {
+    logger.warn('convertMessages received invalid messages', { messages });
+    return result;
+  }
 
   // 添加系统指令
   if (instructions) {

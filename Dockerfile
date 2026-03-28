@@ -47,7 +47,7 @@ ENV NODE_ENV=production
 ENV AUTH_SECRET=build-time-placeholder
 ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
 ENV ENCRYPTION_KEY=build-time-placeholder-at-least-32-chars-long
-RUN pnpm next build --webpack
+RUN pnpm next build
 
 # Stage 3: Runner
 FROM base AS runner

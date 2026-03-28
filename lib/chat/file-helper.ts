@@ -32,6 +32,12 @@ function isExtractableTextFile(fileName: string, mimeType: string): boolean {
 }
 
 export async function processMessageAttachments(messages: Message[]): Promise<Message[]> {
+  // 安全检查：确保 messages 是数组
+  if (!messages || !Array.isArray(messages)) {
+    logger.warn('processMessageAttachments received invalid messages', { messages });
+    return [];
+  }
+  
   return Promise.all(messages.map(async (m) => {
     // 如果没有附件，直接返回原消息
     if (!m.attachments || m.attachments.length === 0) {

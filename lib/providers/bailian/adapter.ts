@@ -100,6 +100,13 @@ export class BailianAdapter implements APIAdapter {
             // BaseCallArgs 类型 - 只传递必要的参数
             // 模型参数由前端配置处理
             const baseArgs = input as BaseCallArgs;
+            
+            // 安全检查：确保 messages 是数组
+            if (!baseArgs.messages || !Array.isArray(baseArgs.messages)) {
+                logger.error('BailianAdapter received invalid messages', { messages: baseArgs.messages });
+                throw new Error('Invalid messages: messages must be a non-empty array');
+            }
+            
             body = {
                 model: baseArgs.model,
                 messages: baseArgs.messages.map(m => {

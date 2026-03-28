@@ -45,6 +45,13 @@ export class ChatAdapter implements APIAdapter {
     } else {
       // BaseCallArgs 类型
       const baseArgs = input as BaseCallArgs;
+      
+      // 安全检查：确保 messages 是数组
+      if (!baseArgs.messages || !Array.isArray(baseArgs.messages)) {
+        logger.error('ChatAdapter received invalid messages', { messages: baseArgs.messages });
+        throw new Error('Invalid messages: messages must be a non-empty array');
+      }
+      
       const isMoonshot = providerConfig.baseURL?.includes('moonshot.cn');
       params = {
         model: baseArgs.model,

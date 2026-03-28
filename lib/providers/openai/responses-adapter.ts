@@ -46,6 +46,13 @@ export class ResponsesAdapter implements APIAdapter {
       // BaseCallArgs 类型 - 只传递必要的参数，不传递模型特定的参数
       // 模型参数由前端配置和 translator 处理
       const baseArgs = input as BaseCallArgs;
+      
+      // 安全检查：确保 messages 是数组
+      if (!baseArgs.messages || !Array.isArray(baseArgs.messages)) {
+        logger.error('ResponsesAdapter received invalid messages', { messages: baseArgs.messages });
+        throw new Error('Invalid messages: messages must be a non-empty array');
+      }
+      
       params = {
         model: baseArgs.model,
         input: baseArgs.messages.flatMap(m => {
