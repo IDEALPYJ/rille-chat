@@ -20,8 +20,10 @@ services:
       - NODE_ENV=production
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
-      # 跳过容器内的迁移，使用外部管理
-      - SKIP_MIGRATIONS=true
+      # Auth.js 需要 AUTH_URL 来验证主机
+      - AUTH_URL=${NEXT_PUBLIC_APP_URL}
+      # 启用数据库迁移
+      - SKIP_MIGRATIONS=false
     volumes:
       - uploads_data:/app/uploads
     depends_on:
