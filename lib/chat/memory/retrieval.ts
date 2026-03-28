@@ -10,6 +10,7 @@ import {
   MemoryRetrievalResult,
   RetrievalMode,
   MemoryRoot,
+  calculateDecayFactor,
 } from "./types";
 import { generateEmbedding, isVectorModeEnabled } from "./embedding";
 import { applyMMRToMemories, DEFAULT_MMR_CONFIG } from "./mmr";

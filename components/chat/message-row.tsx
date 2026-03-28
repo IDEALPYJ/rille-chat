@@ -31,6 +31,7 @@ import { LoadingIndicator } from "./loading-indicator";
 import { MessageAttachments } from "./message-attachments";
 import { VoiceMessagePlayer } from "./voice-message-player";
 import Highlighter from "react-highlight-words";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface MessageRowProps {
   message: Message;

@@ -45,7 +45,7 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
 /**
  * 计算文本相似度
  */
-function _textSimilarity(a: string, b: string): number {
+function textSimilarity(a: string, b: string): number {
   return jaccardSimilarity(tokenize(a), tokenize(b));
 }
 
