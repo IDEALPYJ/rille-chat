@@ -12,7 +12,7 @@ services:
     container_name: rille-chat
     restart: unless-stopped
     ports:
-      - "3000"
+      - "3000:3000"
     environment:
       - AUTH_SECRET=${AUTH_SECRET}
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-rille_chat_password}@db:5432/rille_chat

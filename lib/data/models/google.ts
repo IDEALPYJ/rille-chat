@@ -410,7 +410,7 @@ export const googleModelConfigs: ModelConfig[] = [
         avatar: "gemini",
         releasedAt: "2026-02-26",
         knowledgeCutoff: "2025-01",
-        modelType: "chat",
+        modelType: "image",
         apiType: "google:gemini-generate",
 
         contextWindow: 131072,
@@ -462,7 +462,7 @@ export const googleModelConfigs: ModelConfig[] = [
         avatar: "gemini",
         releasedAt: "2025-11-20",
         knowledgeCutoff: "2025-01",
-        modelType: "chat",
+        modelType: "image",
         apiType: "google:gemini-generate",
 
         contextWindow: 65536,
@@ -502,7 +502,7 @@ export const googleModelConfigs: ModelConfig[] = [
         avatar: "gemini",
         releasedAt: "2025-10-07",
         knowledgeCutoff: "2025-06",
-        modelType: "chat",
+        modelType: "image",
         apiType: "google:gemini-generate",
 
         contextWindow: 65536,

@@ -61,6 +61,7 @@ export function ModelSelector({ selectedProvider, selectedModel, onSelect, image
   const { t } = useI18n()
   const [providers, setProviders] = React.useState<ProviderConfig[]>([])
   const [loading, setLoading] = React.useState(true)
+  const hasInitialized = React.useRef(false)
 
   const fetchSettings = React.useCallback(async () => {
     try {
@@ -85,7 +86,41 @@ export function ModelSelector({ selectedProvider, selectedModel, onSelect, image
             return mId === selectedModel && m.enabled !== false
           })
 
-          if ((!selectedModel || !isCurrentModelValid) && providersList.length > 0) {
+          // 只在首次加载且没有选中模型时尝试使用默认模型
+          if ((!selectedModel || !isCurrentModelValid) && providersList.length > 0 && !hasInitialized.current) {
+            hasInitialized.current = true
+
+            // 尝试获取默认模型设置
+            try {
+              const settingsRes = await fetch("/api/user/settings")
+              if (settingsRes.ok) {
+                const settingsData = await settingsRes.json()
+                const defaultModel = imageGenerationOnly
+                  ? settingsData.defaultImageModel
+                  : settingsData.defaultChatModel
+
+                if (defaultModel) {
+                  const parts = defaultModel.split(":")
+                  if (parts.length === 2) {
+                    const [defaultProviderId, defaultModelId] = parts
+                    // 检查默认模型是否在可用列表中
+                    const defaultProviderData = providersList.find(p => p.id === defaultProviderId)
+                    const isDefaultModelValid = defaultProviderData?.models.some((m: any) => {
+                      const mId = typeof m === 'string' ? m : m.id
+                      return mId === defaultModelId && m.enabled !== false
+                    })
+                    if (isDefaultModelValid) {
+                      onSelect(defaultProviderId, defaultModelId)
+                      return
+                    }
+                  }
+                }
+              }
+            } catch (_e) {
+              console.error("Failed to fetch default model settings:", _e)
+            }
+
+            // 如果没有默认模型或默认模型无效，使用第一个可用模型
             const first = providersList[0]
             const firstModel = first.models.find((m: any) => m.enabled !== false)
             let modelId: string | undefined
