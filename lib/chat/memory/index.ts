@@ -39,6 +39,19 @@ export {
   calculateMemoryQualityScore 
 } from "./maintenance";
 
+// 新增：主题聚合模块
+export { extractSessionTopic, extractSessionTopicsBatch } from "./session-topic-extraction";
+export { generateTopicInsight, calculateFrequencyScore } from "./topic-insight-generation";
+export { 
+  checkAndGenerateInsights, 
+  getUnprocessedTopicClusters,
+  getTopicInsights 
+} from "./topic-clustering";
+export { 
+  importHistoricalSessionTopics, 
+  getImportStatus 
+} from "./historical-topic-import";
+
 // 主处理函数
 import { ProcessMemoryOptions, MemoryOperation, RetrievalMode, Message } from "./types";
 import { extractMemoryOperations } from "./extraction";
@@ -47,6 +60,9 @@ import { getRetrievalMode } from "./retrieval";
 import { logger } from "@/lib/logger";
 import { makeTriggerDecision } from "./value-assessment";
 import { filterExtractionQuality } from "./extraction-filter";
+import { extractSessionTopic } from "./session-topic-extraction";
+import { checkAndGenerateInsights } from "./topic-clustering";
+import { db } from "@/lib/db";
 
 // 全局状态：记录上次提取的轮次
 const userLastExtractionRound = new Map<string, number>();
@@ -143,11 +159,91 @@ export async function processMemory(options: ProcessMemoryOptions): Promise<void
       filteredCount: filteredOperations.length,
       ...result,
     });
+
+    // 6. 新增：单对话主题提取（异步，不阻塞）
+    // 从 options 中获取 sessionId
+    const sessionId = (options as any).sessionId;
+    if (sessionId) {
+      extractSessionTopicAndSave(
+        sessionId,
+        userId,
+        conversationHistory as Message[],
+        extractionModel,
+        settings.providers
+      ).catch((err) => {
+        logger.error("Session topic extraction failed", { error: err, sessionId });
+      });
+    }
   } catch (error) {
     logger.error("Memory processing failed", {
       error,
       userId,
       extractionModel,
+    });
+  }
+}
+
+/**
+ * 提取并保存对话主题
+ */
+async function extractSessionTopicAndSave(
+  sessionId: string,
+  userId: string,
+  messages: Message[],
+  extractionModel: string,
+  providers: Record<string, any>
+): Promise<void> {
+  // 检查是否已处理过
+  const existing = await db.$queryRaw<[{ count: number }]>`
+    SELECT COUNT(*) as count FROM "SessionTopic"
+    WHERE "sessionId" = ${sessionId}
+  `;
+
+  if (existing[0].count > 0) {
+    logger.debug("Session topic already extracted", { sessionId });
+    return;
+  }
+
+  // 提取主题
+  const topicResult = await extractSessionTopic(
+    sessionId,
+    messages,
+    extractionModel,
+    providers
+  );
+
+  if (!topicResult) {
+    return;
+  }
+
+  // 保存到数据库
+  await db.$executeRaw`
+    INSERT INTO "SessionTopic" (
+      id, "sessionId", "userId", "primaryTopic", confidence,
+      summary, "keyPoints", category, status, "createdAt"
+    ) VALUES (
+      gen_random_uuid(), ${sessionId}, ${userId}, ${topicResult.primaryTopic}, ${topicResult.confidence},
+      ${topicResult.summary}, ${topicResult.keyPoints}, ${topicResult.category}, 'active', NOW()
+    )
+  `;
+
+  logger.debug("Session topic saved", {
+    sessionId,
+    primaryTopic: topicResult.primaryTopic,
+    confidence: topicResult.confidence,
+  });
+
+  // 尝试生成主题洞察
+  const insightResult = await checkAndGenerateInsights(userId, extractionModel, providers, {
+    minSessions: 2,
+    maxInsightsPerRun: 1, // 每次只生成一个，避免过载
+  });
+
+  if (insightResult.generated > 0) {
+    logger.info("Topic insight generated", {
+      userId,
+      generated: insightResult.generated,
+      topics: insightResult.insights.map((i) => i.topic),
     });
   }
 }

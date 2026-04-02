@@ -448,3 +448,71 @@ model EmbeddingCache {
   @@index([hash])
   @@index([model])
 }
+
+// --------------------------------------
+// 8. 对话主题表（用于跨会话聚合）
+// --------------------------------------
+
+model SessionTopic {
+  id                String   @id @default(cuid())
+  sessionId         String   @unique @map("session_id")
+  userId            String   @map("user_id")
+  
+  // 主题信息（从单对话提取）
+  primaryTopic      String   @map("primary_topic")
+  confidence        Float
+  summary           String?
+  keyPoints         String[] @map("key_points")
+  
+  // 分类
+  category          String?
+  
+  // 状态
+  status            String   @default("active")
+  processedAt       DateTime? @map("processed_at")
+  
+  // 关联
+  aggregatedInsightId String? @map("aggregated_insight_id")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([primaryTopic])
+  @@index([status])
+  @@index([userId, primaryTopic])
+  @@map("SessionTopic")
+}
+
+// --------------------------------------
+// 9. 主题洞察表（聚合结果）
+// --------------------------------------
+
+model TopicInsight {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  
+  // 洞察内容
+  topic          String
+  insight        String
+  category       String?
+  
+  // 统计信息
+  sessionCount   Int      @default(0) @map("session_count")
+  firstSeenAt    DateTime? @map("first_seen_at")
+  lastSeenAt     DateTime? @map("last_seen_at")
+  activeDays     Int?     @map("active_days")
+  frequencyScore Float?   @map("frequency_score")
+  
+  // 状态
+  status         String   @default("candidate")
+  confidence     Float    @default(0.5)
+  
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([topic])
+  @@index([status])
+  @@index([userId, topic])
+  @@map("TopicInsight")
+}
