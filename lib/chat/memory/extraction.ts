@@ -205,14 +205,16 @@ function buildExtractionPrompt(
 - **Goal**: 长期计划 
 - **Context**: 短期状态/正在做 
 
-# 核心规则 (严格执行) 
-1. **原子化 (Atomic)**: 复合句必须拆分。 
-   * "我是住在北京的程序员" -> [ADD Profile:住在北京], [ADD Profile:程序员]。 
-2. **反幻觉 (Anti-Hallucination)**: 
-   * ❌ **不提取**: 闲聊、重复信息、**疑问句**("Python好学吗?")、**假设**("如果...")、**第三方信息**。 
-   * ✅ **只提取**: 用户**明确陈述**的事实。 
+# 核心规则 (已放宽，更灵活) 
+1. **原子化 (建议拆分)**: 复合句建议拆分，但允许保留完整语义。 
+   * "我是住在北京的程序员" -> 可拆为 [住在北京], [程序员]，也可保留 [用户是住在北京的程序员]。 
+2. **信息提取 (放宽限制)**: 
+   * ✅ **提取**: 用户明确陈述的事实、偏好、目标、能力。
+   * ✅ **提取**: 疑问句中隐含的事实信息（如"我应该学Python还是Go？"-> 隐含"用户考虑学习编程语言"）。
+   * ✅ **提取**: 从上下文中推断的偏好/目标（如"我家猫不吃猫粮"-> 隐含"用户养猫"）。
+   * ❌ **不提取**: 纯闲聊、重复信息、假设性内容("如果...")、敏感信息（密码、地址等）。 
 3. **操作指令**: 
-   * **IGNORE**: 无新信息或命中"不提取"规则 -> 输出空数组。 
+   * **IGNORE**: 无新信息或纯闲聊 -> 输出空数组。 
    * **ADD**: 新事实 -> "action": "add"。 
    * **UPDATE**: 冲突或补充细节 -> "action": "update", 必填 "target_id"。 
    * **DELETE**: 否认/撤销 -> "action": "delete", 必填 "target_id"。 
@@ -232,16 +234,20 @@ function buildExtractionPrompt(
 User: "刚做完手术，医生说忌辛辣。" 
 Output: [{"root":"Preference","content":"用户因手术忌辛辣","action":"update","target_id":"m1","importance":5}]
 
-**Case 2: 复合拆分 (Atomic Add)** 
+**Case 2: 复合句（可拆分也可保留）** 
 User: "下周去上海出差，顺便看展。" 
 Output: [ 
   {"root":"Context","content":"用户下周去上海出差","action":"add","importance":3}, 
   {"root":"Goal","content":"用户计划在上海看展","action":"add","importance":2} 
 ]
 
-**Case 3: 负面样本 (Ignore)** 
+**Case 3: 疑问句中的隐含信息（提取）** 
 User: "Python 和 Go 哪个做后端好？" 
-Output: []
+Output: [{"root":"Goal","content":"用户考虑学习后端编程语言","action":"add","importance":2}]
+
+**Case 4: 从上下文推断（提取）** 
+User: "我家猫不吃猫粮。" 
+Output: [{"root":"Profile","content":"用户养猫","action":"add","importance":3}]
 
 # Start 
 [Existing Memories]: 

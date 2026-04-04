@@ -132,10 +132,11 @@ async function executeAdd(
   // 4. 计算内容哈希（新增）
   const contentHash = computeContentHash(op.content);
 
-  // 5. 确定初始状态
-  // Profile 类型或重要性 >= 4 的直接设为 active，否则为 candidate
+  // 5. 确定初始状态（已放宽：重要性 >= 3 或关键类型直接设为 active）
+  // 放宽条件让更多记忆可直接被检索
+  const isKeyRoot = op.root === "Profile" || op.root === "Ability" || op.root === "Goal";
   const initialStatus: MemoryStatus =
-    op.importance >= 4 || op.root === "Profile" ? "active" : "candidate";
+    op.importance >= 3 || isKeyRoot ? "active" : "candidate";
 
   // 6. 插入数据库
   await db.$executeRaw`
