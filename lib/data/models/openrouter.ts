@@ -155,6 +155,144 @@ export const openrouterModelConfigs: ModelConfig[] = [
         ]
     },
     {
+        id: "openai/gpt-5.4-mini",
+        displayName: "GPT-5.4 mini",
+        avatar: "gpt",
+        releasedAt: "2026-03-17",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 400000,
+        maxOutput: 128000,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", tiers: [{ rate: 0.75 }], unit: "1M_tokens" },
+                { type: "text", name: "cacheRead", tiers: [{ rate: 0.075 }], unit: "1M_tokens" },
+                { type: "text", name: "output", tiers: [{ rate: 4.50 }], unit: "1M_tokens" },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 10.00, condition: "openai"}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "structured_outputs", "function_calling"],
+        builtinTools: ["web_search"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["none", "low", "medium", "high", "xhigh"],
+                    default: "none"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "engine",
+                type: "select",
+                options: ["native", "exa"],
+                default: "native"
+            },
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0
+            }
+        ],
+    },
+    {
+        id: "openai/gpt-5.4-nano",
+        displayName: "GPT-5.4 nano",
+        avatar: "gpt",
+        releasedAt: "2026-03-17",
+        modelType: "chat",
+        apiType: "openai:responses",
+
+        contextWindow: 400000,
+        maxOutput: 128000,
+
+        pricing: {
+            currency: "USD",
+            items: [
+                { type: "text", name: "input", tiers: [{ rate: 0.20 }], unit: "1M_tokens" },
+                { type: "text", name: "cacheRead", tiers: [{ rate: 0.02 }], unit: "1M_tokens" },
+                { type: "text", name: "output", tiers: [{ rate: 1.25 }], unit: "1M_tokens" },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 10.00, condition: "openai"}] },
+                { type: "tools", name: "web_search", unit: "1K_web_search", tiers: [{rate: 4.00, condition: "openrouter"}] }
+            ]
+        },
+
+        modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+        },
+
+        features: ["reasoning", "structured_outputs", "function_calling"],
+        builtinTools: ["web_search"],
+
+        reasoning: {
+            readonly: false,
+            defaultEnabled: true,
+            intensity: {
+                supportedModes: ["effort"],
+                effort: {
+                    options: ["none", "low", "medium", "high", "xhigh"],
+                    default: "none"
+                }
+            }
+        },
+
+        parameters: [
+            {
+                id: "engine",
+                type: "select",
+                options: ["native", "exa"],
+                default: "native"
+            },
+            {
+                id: "verbosity",
+                type: "select",
+                options: ["low", "medium", "high"],
+                default: "medium"
+            },
+            {
+                id: "temperature",
+                type: "number",
+                min: 0, max: 2, step: 0.1,
+                default: 1.0
+            },
+            {
+                id: "top_p",
+                type: "number",
+                min: 0, max: 1, step: 0.05,
+                default: 1.0
+            }
+        ],
+    },
+    {
         id: "openai/gpt-5.3-chat",
         displayName: "GPT-5.3 Chat",
         avatar: "gpt",
