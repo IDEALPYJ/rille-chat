@@ -65,6 +65,7 @@ interface ChatOptions {
   enabledTools?: string[];
   advancedSettings?: AdvancedSettings;
   voiceInfo?: { audioUrl: string; audioDuration: number };
+  attachments?: Attachment[];
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -594,7 +595,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     const parentId = targetMessage.parentId;
     const branch = getMessageBranch(allMessages, parentId);
-    const apiMessages = branch.map(({ id, role, content }) => ({ id, role, content }));
+    // 包含附件信息，确保重新生成时附件能正确发送给模型
+    const apiMessages = branch.map(({ id, role, content, attachments }) => ({ id, role, content, attachments }));
 
     const assistantMsgId = crypto.randomUUID();
     await processStream(apiMessages, parentId, currentSessionIdRef.current, { ...options, responseMessageId: assistantMsgId } as any);
@@ -614,6 +616,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       role: 'user',
       content: newContent,
       parentId: parentId,
+      attachments: options.attachments || targetMessage.attachments,
     };
 
     const updatedAllMessages = addMessageToTree(allMessages, newUserMessage);
@@ -621,7 +624,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setCurrentLeafId(newUserMessageId);
 
     const branch = getMessageBranch(updatedAllMessages, newUserMessageId);
-    const apiMessages = branch.map(({ id, role, content }) => ({ id, role, content }));
+    // 包含附件信息，确保编辑后附件能正确发送给模型
+    const apiMessages = branch.map(({ id, role, content, attachments }) => ({ id, role, content, attachments }));
 
     const assistantMsgId = crypto.randomUUID();
     await processStream(apiMessages, newUserMessageId, currentSessionIdRef.current, { ...options, responseMessageId: assistantMsgId } as any);

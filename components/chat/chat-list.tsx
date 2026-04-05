@@ -15,7 +15,7 @@ interface ChatListProps {
   onLoadMore?: () => void;
   onSelectArtifact: (artifact: { code: string; language: string }) => void;
   onRegenerate: (messageId: string) => void;
-  onEdit: (messageId: string, newContent: string) => void;
+  onEdit: (messageId: string, newContent: string, attachments?: Message["attachments"]) => void;
   onFork?: (messageId: string) => void;
   onSpeak?: (text: string) => void;
   bottomPadding?: number;
@@ -185,25 +185,49 @@ export function ChatList({
   // 编辑状态管理
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [editAttachments, setEditAttachments] = useState<Message["attachments"]>([]);
 
-  const handleEditStart = useCallback((id: string, content: string) => {
+  const handleEditStart = useCallback((id: string, content: string, attachments?: Message["attachments"]) => {
     setEditingMessageId(id);
     setEditContent(content);
+    setEditAttachments(attachments || []);
   }, []);
 
   const handleEditCancel = useCallback(() => {
     setEditingMessageId(null);
     setEditContent("");
+    setEditAttachments([]);
   }, []);
 
   const handleEditSave = useCallback((id: string, content: string) => {
     const message = messages.find(m => m.id === id);
-    if (content.trim() && content !== message?.content) {
-      onEdit(id, content);
+    if (content.trim() && (content !== message?.content || JSON.stringify(editAttachments) !== JSON.stringify(message?.attachments))) {
+      // 传递附件信息，确保编辑后附件不会丢失
+      onEdit(id, content, editAttachments);
     }
     setEditingMessageId(null);
     setEditContent("");
-  }, [messages, onEdit]);
+    setEditAttachments([]);
+  }, [messages, onEdit, editAttachments]);
+
+  const handleEditAttachmentRemove = useCallback((attachmentId: string) => {
+    setEditAttachments(prev => prev?.filter(a => a.id !== attachmentId) || []);
+  }, []);
+
+  const handleEditAttachmentAdd = useCallback((files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    // 创建新的附件对象（未上传状态）
+    const newAttachments: Message["attachments"] = Array.from(files).map(file => ({
+      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: file.name,
+      url: URL.createObjectURL(file),
+      type: file.type,
+      size: file.size,
+    }));
+
+    setEditAttachments(prev => [...(prev || []), ...newAttachments]);
+  }, []);
 
   /**
    * 虚拟列表项渲染函数
@@ -224,17 +248,20 @@ export function ChatList({
         setCurrentLeafId={setCurrentLeafId}
         isEditing={isEditing}
         editContent={isEditing ? editContent : ""}
+        editAttachments={isEditing ? editAttachments : undefined}
         onEditStart={handleEditStart}
         onEditCancel={handleEditCancel}
         onEditSave={handleEditSave}
         onEditContentChange={setEditContent}
+        onEditAttachmentRemove={handleEditAttachmentRemove}
+        onEditAttachmentAdd={handleEditAttachmentAdd}
         isLast={isLast}
         isLoading={isLoading}
         onSpeak={onSpeak}
       />
     </div>
     );
-  }, [onEdit, onRegenerate, onFork, onSelectArtifact, messageMap, rootMessageIds, setCurrentLeafId, editingMessageId, editContent, handleEditStart, handleEditCancel, handleEditSave, isLoading, messages.length, onSpeak]);
+  }, [onEdit, onRegenerate, onFork, onSelectArtifact, messageMap, rootMessageIds, setCurrentLeafId, editingMessageId, editContent, editAttachments, handleEditStart, handleEditCancel, handleEditSave, handleEditAttachmentRemove, handleEditAttachmentAdd, isLoading, messages.length, onSpeak]);
 
   const components = useMemo(() => ({
     Header: () => (

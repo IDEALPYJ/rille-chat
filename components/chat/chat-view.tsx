@@ -190,8 +190,8 @@ export function ChatView({ projectId, initialSessionId }: ChatViewProps) {
     await handleRegenerate(messageId, { advancedSettings });
   }, [handleRegenerate, advancedSettings]);
 
-  const wrappedHandleEdit = useCallback(async (messageId: string, newContent: string) => {
-    await handleEdit(messageId, newContent, { advancedSettings });
+  const wrappedHandleEdit = useCallback(async (messageId: string, newContent: string, attachments?: Message["attachments"]) => {
+    await handleEdit(messageId, newContent, { advancedSettings, attachments });
   }, [handleEdit, advancedSettings]);
 
   const hasMessages = messages.length > 0;

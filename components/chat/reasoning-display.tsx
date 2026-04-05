@@ -14,10 +14,52 @@ export function ReasoningDisplay({ content }: ReasoningDisplayProps) {
   const { t } = useI18n();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const lastLine = useMemo(() => {
+  // 智能预览文本：优先显示**包裹的标题，无标题则显示最新段落首句
+  const previewText = useMemo(() => {
     if (!content) return "";
     const lines = content.trim().split("\n");
-    return lines[lines.length - 1] || "";
+
+    // 1. 查找被**包裹的标题（从后往前找，显示最新的标题）
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const trimmed = lines[i].trim();
+      const boldMatch = trimmed.match(/^\*\*([^*]+)\*\*$/);
+      if (boldMatch) {
+        // 返回**包裹的内容
+        return boldMatch[1];
+      }
+    }
+
+    // 2. 查找Markdown标题（支持 # ## ### 等）
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const trimmed = lines[i].trim();
+      if (/^#{1,6}\s+.+/.test(trimmed)) {
+        // 移除 # 符号，返回标题文本
+        return trimmed.replace(/^#{1,6}\s+/, "");
+      }
+    }
+
+    // 3. 无标题时，显示最新段落的第一句话（从后往前找）
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      // 跳过空行、代码块标记、列表标记
+      if (!line || line.startsWith("```") || line.startsWith("-") || line.startsWith("*")) {
+        continue;
+      }
+      // 提取第一句话（到第一个句号、问号或感叹号）
+      const match = line.match(/^([^。！？.!?]+[。！？.!?]?)/);
+      if (match) {
+        return match[1];
+      }
+      return line.slice(0, 50); // 如果没有标点，取前50字符
+    }
+
+    // 4. 兜底：返回最后一行非空内容
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i].trim()) {
+        return lines[i].trim();
+      }
+    }
+    return "";
   }, [content]);
 
   if (!content) return null;
@@ -33,10 +75,10 @@ export function ReasoningDisplay({ content }: ReasoningDisplayProps) {
           <span>{t("messageDisplay.reasoning")}</span>
           {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
         </div>
-        
-        {!isExpanded && lastLine && (
+
+        {!isExpanded && previewText && (
           <div className="text-muted-foreground/70 text-[11px] truncate flex-1 font-normal italic">
-            {lastLine}
+            {previewText}
           </div>
         )}
       </div>

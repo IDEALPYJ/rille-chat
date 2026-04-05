@@ -6,7 +6,7 @@ import remarkBreaks from "remark-breaks";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import { RotateCw, GitBranch, Pencil, Coins, Volume2, AlertCircle } from "lucide-react";
+import { RotateCw, GitBranch, Pencil, Coins, Volume2, AlertCircle, X, Plus } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
 
 import { Message } from "@/lib/types";
@@ -32,6 +32,8 @@ import { MessageAttachments } from "./message-attachments";
 import { VoiceMessagePlayer } from "./voice-message-player";
 import Highlighter from "react-highlight-words";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getFileIcon } from "./chat-utils";
+import { formatSize, truncateFileName } from "@/lib/utils";
 
 interface MessageRowProps {
   message: Message;
@@ -44,10 +46,13 @@ interface MessageRowProps {
   _onSelectArtifact: (a: any) => void;
   isEditing: boolean;
   editContent: string;
-  onEditStart: (id: string, content: string) => void;
+  editAttachments?: Message["attachments"];
+  onEditStart: (id: string, content: string, attachments?: Message["attachments"]) => void;
   onEditCancel: () => void;
   onEditSave: (id: string, content: string) => void;
   onEditContentChange: (content: string) => void;
+  onEditAttachmentRemove?: (attachmentId: string) => void;
+  onEditAttachmentAdd?: (files: FileList | null) => void;
   isLast: boolean;
   isLoading: boolean;
   searchWords?: string[];
@@ -69,10 +74,13 @@ export const MessageRow = memo(({
   setCurrentLeafId,
   isEditing,
   editContent,
+  editAttachments,
   onEditStart,
   onEditCancel,
   onEditSave,
   onEditContentChange,
+  onEditAttachmentRemove,
+  onEditAttachmentAdd,
   isLast,
   isLoading,
   searchWords,
@@ -83,6 +91,7 @@ export const MessageRow = memo(({
   const isUser = message.role === "user";
   const isContentEmpty = !message.content && !message.reasoning_content && !message.search_results;
   const showLoading = !isUser && isLast && isLoading && isContentEmpty;
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // 检查是否为图像消息
   const isImageMessage = useMemo(() => {
@@ -106,8 +115,9 @@ export const MessageRow = memo(({
     }
   }, [isUser, message.content]);
 
-  const handleEditStart = () => message.id && onEditStart(message.id, message.content);
+  const handleEditStart = () => message.id && onEditStart(message.id, message.content, message.attachments);
   const handleEditSave = () => message.id && onEditSave(message.id, editContent);
+  const handleAttachmentAdd = () => fileInputRef.current?.click();
 
   // 自定义 Markdown 渲染组件，处理代码块、数学公式等
   const markdownComponents = useMemo(() => {
@@ -220,8 +230,62 @@ export const MessageRow = memo(({
               </div>
             )}
 
-            {/* 渲染附件 */}
-            <MessageAttachments attachments={message.attachments} isUser={isUser} />
+            {/* 渲染附件 - 非编辑模式 */}
+            {!isEditing && <MessageAttachments attachments={message.attachments} isUser={isUser} />}
+
+            {/* 编辑模式下的附件区域 - 位于文本框外侧上方 */}
+            {isEditing && (
+              <div className="w-full mb-2">
+                <div className="flex flex-wrap gap-2">
+                  {editAttachments?.map((file) => (
+                    <div
+                      key={file.id}
+                      className="flex items-center gap-2 bg-muted dark:bg-muted/30 border border-border rounded-md p-2 relative group"
+                    >
+                      <div className="p-1.5 bg-white dark:bg-card border border-border shrink-0 rounded">
+                        {getFileIcon(file.type)}
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-medium truncate max-w-[150px]" title={file.name}>
+                          {truncateFileName(file.name)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">{formatSize(file.size)}</span>
+                      </div>
+                      {onEditAttachmentRemove && (
+                        <button
+                          type="button"
+                          onClick={() => onEditAttachmentRemove(file.id)}
+                          className="absolute -top-1 -right-1 bg-muted text-muted-foreground hover:text-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {/* 添加附件按钮 */}
+                  {onEditAttachmentAdd && (
+                    <button
+                      type="button"
+                      onClick={handleAttachmentAdd}
+                      className="flex items-center gap-2 border border-dashed border-border rounded-md p-2 hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span className="text-xs">添加附件</span>
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    onEditAttachmentAdd?.(e.target.files);
+                    e.target.value = "";
+                  }}
+                  multiple
+                  className="hidden"
+                />
+              </div>
+            )}
 
             <div
               className={`${isUser ? "inline-block self-end" : "block w-full"} text-left px-3 py-2 rounded-lg min-w-0 max-w-full ${isUser
@@ -237,14 +301,14 @@ export const MessageRow = memo(({
                   <Textarea
                     value={editContent}
                     onChange={(e) => onEditContentChange(e.target.value)}
-                    className="w-full resize-none border-none bg-transparent p-0 shadow-none focus-visible:ring-0 min-h-0 text-inherit font-inherit leading-6"
+                    className="w-full resize-none border-none bg-transparent p-0 shadow-none focus-visible:ring-0 min-h-0 text-xs leading-5"
                     autoFocus
                   />
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={onEditCancel} className="px-3 text-xs bg-background/50">
+                    <Button variant="outline" onClick={onEditCancel} className="h-7 px-3 text-xs rounded-md">
                       {t("message.cancel")}
                     </Button>
-                    <Button size="sm" onClick={handleEditSave} className="px-3 text-xs">
+                    <Button onClick={handleEditSave} className="h-7 px-3 text-xs rounded-md bg-foreground text-background hover:bg-foreground/90">
                       {t("message.confirm")}
                     </Button>
                   </div>

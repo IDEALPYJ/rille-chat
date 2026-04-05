@@ -42,8 +42,8 @@ model Memory {
 
   // 向量数据（可选，关键词模式时为 null）
   // 实际向量存储在 embedding_vector 列（pgvector 扩展）
-  // 使用 Unsupported 类型因为 Prisma 不原生支持 pgvector
-  embedding Unsupported("vector")? @map("embedding_vector")
+  // 使用 Bytes 类型代替 Unsupported("vector") 以避免 pgvector 依赖
+  embedding Bytes? @map("embedding_vector")
 
   // 记忆分类
   root String? // Profile | Preference | Ability | Goal | Context

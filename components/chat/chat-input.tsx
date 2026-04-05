@@ -280,6 +280,37 @@ export function ChatInput({
     setShowAttachments(false);
   };
 
+  // 处理粘贴事件，支持粘贴图片和文件
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const files: File[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      // 检查是否是文件类型
+      if (item.kind === "file") {
+        const file = item.getAsFile();
+        if (file) {
+          files.push(file);
+        }
+      }
+    }
+
+    // 如果有文件，阻止默认粘贴行为并上传文件
+    if (files.length > 0) {
+      e.preventDefault();
+      const result = uploadFiles(files);
+      if (result && !result.success && result.message) {
+        setAlertMessage(result.message);
+        setAlertOpen(true);
+      }
+    }
+    // 如果没有文件，允许默认的文本粘贴行为
+  };
+
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -391,10 +422,9 @@ export function ChatInput({
       {/* 已选文件横向展示区 */}
       {attachments.length > 0 && (
         <>
-          {(attachments.some((a) => a.status === "uploading") || attachments.some((a) => a.status === "error")) && (
+          {attachments.some((a) => a.status === "error") && (
             <div className="text-xs text-amber-600 dark:text-amber-500 px-2">
-              {attachments.some((a) => a.status === "error") && "请删除错误状态的文件以发送消息"}
-              {attachments.some((a) => a.status === "uploading") && !attachments.some((a) => a.status === "error") && "文件上传中，请稍候..."}
+              请删除错误状态的文件以发送消息
             </div>
           )}
           <AttachmentList
@@ -451,6 +481,7 @@ export function ChatInput({
                   value={input}
                   onChange={safeHandleInputChange}
                   onKeyDown={onKeyDown}
+                  onPaste={handlePaste}
                   onCompositionStart={() => {
                     isComposingRef.current = true;
                   }}

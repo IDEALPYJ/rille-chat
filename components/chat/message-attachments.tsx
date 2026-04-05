@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Check } from "lucide-react";
 import { Message } from "@/lib/types";
 import { getFileIcon } from "./chat-utils";
 import { formatSize, truncateFileName } from "@/lib/utils";
@@ -13,27 +13,36 @@ export const MessageAttachments = memo(({ attachments, isUser }: MessageAttachme
   if (!attachments || attachments.length === 0) return null;
 
   return (
-    <div className={`flex flex-col gap-2 mb-2 ${isUser ? "items-end" : "items-start"}`}>
+    <div className={`flex flex-wrap gap-2 mb-2 ${isUser ? "justify-end" : "justify-start"}`}>
       {attachments.map((file) => (
         <div
           key={file.id}
-          className="flex items-center gap-3 bg-mutedborder border-borderrounded-xl p-2 min-w-[220px] max-w-[260px] group/file transition-all hover:bg-muted/80"
+          className="flex items-center gap-2 bg-muted dark:bg-muted/30 border border-border dark:border-border/50 rounded-md p-2 min-w-0 max-w-[260px] relative group"
         >
-          <div className="p-2 bg-white rounded-lg border border-bordershadow-sm shrink-0">
+          <div className="p-1.5 bg-white dark:bg-card border border-border shrink-0 rounded">
             {getFileIcon(file.type)}
           </div>
-          <div className="flex flex-col min-w-0 flex-1 pr-2">
+          <div className="flex flex-col min-w-0 flex-1 pr-6">
             <a
               href={file.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-foregroundtruncate hover:text-blue-600 hover:underline flex items-center gap-1"
+              className="text-xs font-medium text-foreground truncate hover:text-blue-600 hover:underline flex items-center gap-1"
               title={file.name}
             >
               {truncateFileName(file.name)}
-              <ExternalLink size={12} className="shrink-0 opacity-0 group-hover/file:opacity-100" />
+              <ExternalLink size={10} className="shrink-0 opacity-0 group-hover:opacity-100" />
             </a>
-            <span className="text-[10px] text-muted-foregrounduppercase truncate">{formatSize(file.size)}</span>
+            <div className="flex items-center gap-2">
+              <div className="relative w-3.5 h-3.5 shrink-0 flex items-center justify-center">
+                <div className="absolute inset-0 transition-all duration-500 delay-100 transform opacity-100 scale-100 rotate-0">
+                  <Check className="w-full h-full text-green-500" strokeWidth={3} />
+                </div>
+              </div>
+              <span className="text-[10px] text-muted-foreground truncate">
+                {formatSize(file.size)}
+              </span>
+            </div>
           </div>
         </div>
       ))}
